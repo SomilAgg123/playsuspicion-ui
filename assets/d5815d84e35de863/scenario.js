@@ -1,0 +1,64 @@
+// Sample data and local transitions for the separately built UI test site only.
+export const TURN_MS = 15_000;
+const names = ['Priya', 'Sam', 'Chad', 'Maya', 'Jordan', 'Bea'];
+
+export function createScenario() {
+  return {
+    screen: 'S01', canJoin: true, player: { name: '', drunkNumber: null },
+    information: {
+      team: 'Mafia', role: 'Hired Gun', otherMafia: ['Priya (Mastermind)', 'Sam'],
+      mission: 'Get Chad to say "monster mash"', observer: 'Maya', observes: 'Jordan', spiesOn: 'Bea',
+    },
+    buddies: names.map((name, index) => ({ id: `sample-${index}`, name })),
+    arrived: false, selectedBuddyId: null, turnIndex: 0,
+  };
+}
+
+export function acceptsPassword(value) { return typeof value === 'string' && value.trim().toLowerCase() === 'mafia'; }
+
+function withTurn(state, index, startsAt) {
+  const turn = state.turns[index];
+  return {
+    ...state, screen: 'S05', turnIndex: index,
+    mic: { ...turn, turnId: `sample-turn-${index}`, canFinish: index === 0, endsAt: startsAt + TURN_MS },
+  };
+}
+
+export function tick(state, now) {
+  if (state.screen === 'S03' && state.arrived && now >= state.transitionAt) return { ...state, screen: 'S04' };
+  while (state.screen === 'S05' && state.mic.endsAt !== null && now >= state.mic.endsAt) {
+    if (state.turnIndex === state.turns.length - 1) return { ...state, mic: { ...state.mic, canFinish: false, endsAt: null } };
+    state = withTurn(state, state.turnIndex + 1, state.mic.endsAt);
+  }
+  return state;
+}
+
+export function act(current, action, now) {
+  const state = tick(current, now);
+  if (action.type === 'join' && state.screen === 'S01') {
+    const name = typeof action.name === 'string' ? action.name.trim() : '';
+    if (!name || name.length > 120 || !Number.isFinite(action.drunkNumber) || action.drunkNumber < 0) return state;
+    return { ...state, screen: 'S02', player: { name, drunkNumber: action.drunkNumber } };
+  }
+  if (action.type === 'next' && state.screen === 'S02') return { ...state, screen: 'S03' };
+  if (action.type === 'arrive' && state.screen === 'S03' && !state.arrived) {
+    return { ...state, arrived: true, transitionAt: now + 600 };
+  }
+  if (action.type === 'buddy' && state.screen === 'S04') {
+    const selected = state.buddies.find(buddy => buddy.id === action.playerId);
+    if (!selected) return state;
+    const turns = [
+      { speaker: state.player.name, buddy: selected.name },
+      ...state.buddies.map((buddy, index) => ({ speaker: buddy.name, buddy: state.buddies[index + 1]?.name ?? state.player.name })),
+    ];
+    return withTurn({ ...state, selectedBuddyId: selected.id, turns }, 0, now);
+  }
+  if (action.type === 'done' && state.screen === 'S05' && state.mic.canFinish && action.turnId === state.mic.turnId) {
+    return withTurn(state, state.turnIndex + 1, now);
+  }
+  return state;
+}
+
+export function remainingSeconds(state, now) {
+  return state.mic?.endsAt == null ? 0 : Math.max(0, Math.ceil((state.mic.endsAt - now) / 1000));
+}

@@ -86,7 +86,8 @@ export function renderScreen(app, state, dispatch, seconds) {
     const title = element('h1', 'poster-title');
     title.setAttribute('aria-label', 'Welcome to Suspicion');
     for (const word of ['Welcome', 'to', 'Suspicion']) {
-      const stamp = element('span', `poster-word poster-${word.toLowerCase()}`, word);
+      const stamp = element('span', `poster-word poster-${word.toLowerCase()}`);
+      stamp.append(element('span', 'poster-ink', word));
       stamp.setAttribute('aria-hidden', 'true');
       title.append(stamp);
     }

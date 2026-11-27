@@ -24,19 +24,26 @@ function field(label, name, type, value) {
   return { wrapper, input };
 }
 
-function infoRow(label, value, description) {
-  const row = element('div', 'info-row');
-  row.append(element('dt', '', `${label}:`), element('dd', '', value));
-  if (description) row.append(element('dd', 'info-description', description));
-  return row;
+function assignmentCard(label, value, ...lines) {
+  const instructions = lines.filter(Boolean);
+  const card = element(instructions.length ? 'details' : 'div', 'assignment-card');
+  const heading = element(instructions.length ? 'summary' : 'div', 'assignment-heading');
+  heading.append(element('span', 'assignment-label', label), element('strong', 'assignment-value', value));
+  card.append(heading);
+  if (instructions.length) {
+    card.name = 'assignments';
+    card.dataset.assignment = label;
+    const body = element('div', 'assignment-instructions');
+    for (const line of instructions) body.append(element('p', '', line));
+    card.append(body);
+  }
+  return card;
 }
 
-function assignmentCard(label, person, instructions) {
-  const card = element('details', 'assignment-card');
-  card.name = 'holding-assignments';
-  const summary = element('summary');
-  summary.append(element('span', 'assignment-label', label), element('strong', 'assignment-person', person));
-  card.append(summary, element('p', 'assignment-instructions', instructions));
+function missionCard(mission) {
+  const card = element('section', 'mission-card');
+  card.append(element('h2', 'assignment-label', 'Secret mission'), element('p', 'mission-text', mission),
+    element('p', 'mission-instructions', 'Complete this before the final roundtable to stay alive.'));
   return card;
 }
 
@@ -103,24 +110,18 @@ export function renderScreen(app, state, dispatch, seconds) {
 
   if (state.screen === 'S02') {
     const info = state.information;
-    const list = element('div', 'game-panel info-list role-details');
+    const list = element('div', 'role-details');
     list.tabIndex = 0;
     list.setAttribute('role', 'region');
     list.setAttribute('aria-label', 'Role information');
-    const identity = element('dl', 'info-group');
     const teamGoal = info.team === 'Mafia'
       ? 'Keep at least one mafia member alive when the final roundtable ends.'
       : 'Eliminate every mafia member before ending the final roundtable.';
     const role = roles[info.role];
-    const roleRow = infoRow('Role', info.role, role?.character);
-    const task = info.roleTask ?? formatRoleTask(info.role);
-    if (task) roleRow.append(element('dd', 'role-task', task));
-    identity.append(infoRow('Team', info.team, teamGoal), roleRow);
-    if (info.otherMafia) identity.append(infoRow('Other mafia', info.otherMafia.join(', ')));
-    const mission = element('dl', 'info-group');
-    mission.classList.add('instruction-block');
-    mission.append(infoRow('Secret mission', info.mission, 'Complete this before the final roundtable to stay alive.'));
-    list.append(identity, mission);
+    list.append(assignmentCard('Team', info.team, teamGoal),
+      assignmentCard('Role', info.role, role?.character, info.roleTask ?? formatRoleTask(info.role)));
+    if (info.otherMafia) list.append(assignmentCard('Other mafia', String(info.otherMafia.length), ...info.otherMafia));
+    list.append(missionCard(info.mission));
     const next = button(state.viewingRole ? 'Back' : 'Next', () => dispatch({ type: state.viewingRole ? 'back' : 'next' }));
     next.classList.add('screen-action');
     if (state.viewingRole) next.dataset.navigation = 'return';
@@ -183,7 +184,7 @@ export function renderScreen(app, state, dispatch, seconds) {
 
   if (state.screen === 'S06') {
     content.classList.add('holding-content');
-    content.append(
+    content.append(missionCard(state.information.mission),
       assignmentCard('Observer', state.holding.observer, "This person confirms when you complete your mission. You can tell them when you're about to do it so they know."),
       assignmentCard('You observe', state.holding.observes, 'Confirm when this person completes their mission. They are allowed to tell you and communicate with you about it.'),
       assignmentCard('You spy on', state.holding.spiesOn, 'Guess this person’s secret mission to eliminate them. You have two guesses for the whole night.'));
@@ -192,6 +193,12 @@ export function renderScreen(app, state, dispatch, seconds) {
   shell.append(content);
   // A background game transition can redraw the role the player is reading.
   const roleScroll = app.querySelector('.role-details')?.scrollTop;
+  const openAssignment = app.firstElementChild?.dataset.screen === state.screen
+    && app.querySelector('details[open]')?.dataset.assignment;
+  if (openAssignment) {
+    const matchingCard = [...shell.querySelectorAll('details')].find(card => card.dataset.assignment === openAssignment);
+    if (matchingCard) matchingCard.open = true;
+  }
   app.replaceChildren(shell);
   if (roleScroll && state.screen === 'S02') shell.querySelector('.role-details').scrollTop = roleScroll;
 }

@@ -1,5 +1,6 @@
 import { missions } from './missions.js';
 import { canBeEnabler } from './roles.js';
+import { drawEventDrinks } from './drinking-plans.js';
 
 export const TURN_MS = 15_000;
 const names = ['Priya', 'Sam', 'Chad', 'Maya', 'Jordan', 'Bea'];
@@ -35,14 +36,14 @@ export function tick(state, now) {
   while (state.screen === 'S05' && now >= state.mic.endsAt) {
     state = withTurn(state, state.turnIndex + 1, state.mic.endsAt);
   }
-  if (state.screen === 'S07' && state.sampleDrink && now >= state.drinkAt) {
-    const drink = state.sampleDrink;
-    return { ...state, screen: 'drink', drink, sampleDrink: null };
+  if (state.screen === 'S07' && state.sampleQueue?.length) {
+    const [drink, ...sampleQueue] = state.sampleQueue;
+    return { ...state, screen: 'drink', drink, sampleQueue };
   }
   return state;
 }
 
-export function act(current, action, now) {
+export function act(current, action, now, randomInt = max => Math.floor(Math.random() * max)) {
   const state = tick(current, now);
   if (action.type === 'join' && state.screen === 'S01') {
     const name = typeof action.name === 'string' ? action.name.trim() : '';
@@ -69,22 +70,21 @@ export function act(current, action, now) {
     return { ...state, screen: 'S06', missions: { observer: 'Maya', observes: 'Jordan', spiesOn: 'Bea' } };
   }
   if (action.type === 'finish-missions' && state.screen === 'S06') {
-    const participates = state.player.drunkNumber > 0 && ['buzz', 'good-time', 'all-out'].includes(state.player.drinkingPlan);
-    const sampleDrink = participates ? { id: 'sample-own', amount: 0.25 } : sampleVerification(state);
-    return { ...state, screen: 'S07', sampleDrink, drinkAt: now + 4000, discussion: {
+    return { ...state, screen: 'S07', discussion: {
       observedMission: 'Give Sam a hug', observationConfirmed: false, spyGuess: null,
     } };
   }
   if (state.screen === 'drink' && action.drinkId === state.drink.id) {
-    if (action.type === 'report-drink' && !state.drink.playerName) {
-      return { ...state, screen: 'S07', drink: null, sampleDrink: sampleVerification(state), drinkAt: now + 4000 };
-    }
+    if (action.type === 'report-drink' && !state.drink.playerName) return { ...state, screen: 'S07', drink: null };
     if (action.type === 'verify-drink' && state.drink.playerName) return { ...state, screen: 'S07', drink: null };
   }
   if (state.screen === 'S07' && state.discussion) {
     const details = state.discussion;
     if (action.type === 'report-death' && state.information.team === 'Community') return { ...state, dead: true };
-    if (action.type === 'confirm-observation') return { ...state, discussion: { ...details, observationConfirmed: true } };
+    if (action.type === 'confirm-observation' && !details.observationConfirmed) {
+      const sampleQueue = sampleMissionDrinks(state, randomInt);
+      return tick({ ...state, sampleQueue, discussion: { ...details, observationConfirmed: true } }, now);
+    }
     if (action.type === 'guess-mission' && !state.dead && details.spyGuess === (action.previousGuess ?? null) &&
         Number.isInteger(action.missionIndex) && action.missionIndex >= 0 && action.missionIndex < missions.length) {
       return { ...state, discussion: { ...details, spyGuess: action.missionIndex } };
@@ -97,8 +97,17 @@ export function act(current, action, now) {
   return state;
 }
 
-function sampleVerification(state) {
-  return { id: 'sample-observed', playerName: state.missions.observes, amount: 0.5 };
+function sampleMissionDrinks(state, randomInt) {
+  const players = [
+    { ...state.player, id: 'self', joined: true },
+    ...names.map(name => ({ id: name, joined: true, drunkNumber: 4, drinkingPlan: 'buzz' })),
+  ];
+  return drawEventDrinks(players, randomInt).flatMap(({ playerId, amount }) => {
+    if (playerId === 'self') return [{ id: 'sample-own', amount }];
+    // The simulated observed player reports their own assignment.
+    if (playerId === state.missions.observes) return [{ id: 'sample-observed', playerName: playerId, amount }];
+    return [];
+  });
 }
 
 export function remainingSeconds(state, now) {

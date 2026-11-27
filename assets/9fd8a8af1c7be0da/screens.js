@@ -1,5 +1,5 @@
 import { revealPaper } from './role-reveal.js';
-import { drinkingPlans, formatDrinkAmount, formatSipEstimate } from './drinking-plans.js';
+import { drinkingPlans, planDescription, formatDrinkAmount, formatSipEstimate } from './drinking-plans.js';
 import { roles, formatRoleTask } from './roles.js';
 import { missions } from './missions.js';
 
@@ -63,7 +63,7 @@ function drinkingPlanField(numberInput, initialPlan, update) {
       }, { variant: 'secondary' });
       option.setAttribute('aria-pressed', String(opener.value === plan.id));
       option.autofocus = opener.value === plan.id;
-      option.append(element('span', 'field-description', plan.amount(number)));
+      option.append(element('span', 'field-description', planDescription(plan, number)));
       actions.append(option);
     }
     dialog.showModal();

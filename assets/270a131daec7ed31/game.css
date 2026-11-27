@@ -257,6 +257,45 @@ body { background: var(--background-room); color: var(--color-text); font-weight
 .instruction-block dt { color: var(--color-accent); }
 .arrival-content { justify-content: center; }
 
+.holding-content { gap: var(--space-3); }
+.assignment-card {
+  background: var(--background-panel);
+  border: var(--stroke-thin) solid var(--color-control-border);
+  border-radius: var(--radius-panel);
+  box-shadow: var(--shadow-panel);
+}
+.assignment-card summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+  border-radius: inherit;
+  cursor: pointer;
+  list-style: none;
+}
+.assignment-card summary::-webkit-details-marker { display: none; }
+.assignment-label { color: var(--color-label); }
+.assignment-person {
+  grid-column: 1;
+  overflow-wrap: anywhere;
+  font: var(--font-weight-display) var(--font-size-statement) / var(--line-height-statement) var(--font-display);
+}
+.assignment-card summary::after {
+  content: '';
+  grid-area: 1 / 2 / span 2;
+  width: var(--space-3);
+  height: var(--space-3);
+  border: solid currentColor;
+  border-width: 0 var(--stroke-strong) var(--stroke-strong) 0;
+  transform: rotate(45deg);
+}
+.assignment-card[open] summary::after { transform: rotate(225deg); }
+.assignment-card .assignment-instructions {
+  margin-inline: var(--space-5);
+  border-top: var(--stroke-thin) solid var(--color-border);
+  padding-block: var(--space-3) var(--space-4);
+}
 .buddy-list { border: 0; padding: var(--space-0); margin: var(--space-0); min-width: 0; }
 .buddy-list legend { padding: var(--space-0) var(--space-0) var(--space-4); color: var(--color-label); font-weight: var(--font-weight-strong); letter-spacing: var(--tracking-label); }
 .player-list { display: flex; flex-direction: column; gap: var(--space-3); }

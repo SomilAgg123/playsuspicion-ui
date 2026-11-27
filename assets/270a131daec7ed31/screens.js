@@ -31,6 +31,15 @@ function infoRow(label, value, description) {
   return row;
 }
 
+function assignmentCard(label, person, instructions) {
+  const card = element('details', 'assignment-card');
+  card.name = 'holding-assignments';
+  const summary = element('summary');
+  summary.append(element('span', 'assignment-label', label), element('strong', 'assignment-person', person));
+  card.append(summary, element('p', 'assignment-instructions', instructions));
+  return card;
+}
+
 export function renderScreen(app, state, dispatch, seconds) {
   const shell = element('section', 'game-shell');
   shell.dataset.screen = state.screen;
@@ -173,15 +182,11 @@ export function renderScreen(app, state, dispatch, seconds) {
   }
 
   if (state.screen === 'S06') {
-    const list = element('div', 'game-panel info-list');
-    const observation = element('dl', 'info-group');
-    observation.append(
-      infoRow('Observer', state.holding.observer, "This person confirms when you complete your mission. You can tell them when you're about to do it so they know."),
-      infoRow('You observe', state.holding.observes, 'Confirm when this person completes their mission. They are allowed to tell you and communicate with you about it.'));
-    const spy = element('dl', 'info-group');
-    spy.append(infoRow('You spy on', state.holding.spiesOn, 'Guess this person’s secret mission to eliminate them. You have two guesses for the whole night.'));
-    list.append(observation, spy);
-    content.append(list);
+    content.classList.add('holding-content');
+    content.append(
+      assignmentCard('Observer', state.holding.observer, "This person confirms when you complete your mission. You can tell them when you're about to do it so they know."),
+      assignmentCard('You observe', state.holding.observes, 'Confirm when this person completes their mission. They are allowed to tell you and communicate with you about it.'),
+      assignmentCard('You spy on', state.holding.spiesOn, 'Guess this person’s secret mission to eliminate them. You have two guesses for the whole night.'));
   }
 
   shell.append(content);

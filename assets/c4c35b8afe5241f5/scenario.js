@@ -1,4 +1,5 @@
 import { missions } from './missions.js';
+import { canBeEnabler } from './roles.js';
 
 export const TURN_MS = 15_000;
 const names = ['Priya', 'Sam', 'Chad', 'Maya', 'Jordan', 'Bea'];
@@ -46,7 +47,9 @@ export function act(current, action, now) {
   if (action.type === 'join' && state.screen === 'S01') {
     const name = typeof action.name === 'string' ? action.name.trim() : '';
     if (!name || name.length > 120 || !Number.isFinite(action.drunkNumber) || action.drunkNumber < 0) return state;
-    return { ...state, screen: 'role-briefing', player: { name, drunkNumber: action.drunkNumber, drinkingPlan: action.drinkingPlan ?? null } };
+    const information = canBeEnabler(state.information.team, action.drinkingPlan)
+      ? { ...state.information, role: 'The Enabler' } : state.information;
+    return { ...state, screen: 'role-briefing', information, player: { name, drunkNumber: action.drunkNumber, drinkingPlan: action.drinkingPlan ?? null } };
   }
   if (action.type === 'reveal-role' && state.screen === 'role-briefing') return { ...state, screen: 'S02' };
   if (action.type === 'next' && state.screen === 'S02') return { ...state, screen: 'S03', canViewRole: true };

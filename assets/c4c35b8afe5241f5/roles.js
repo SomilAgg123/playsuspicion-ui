@@ -64,10 +64,21 @@ export const roles = {
     character: 'Be inseparably bound to another person',
     task: 'Get [PERSON] to the roundtable with you',
   },
+  'The Enabler': {
+    team: 'Community',
+    character: 'You win when others drink.',
+    task: 'Get other players to finish their drinks with you. The drinks must be full.',
+    drinkingPlans: ['good-time', 'all-out'],
+  },
 };
 
 export const mafiaRoles = Object.keys(roles).filter(name => roles[name].team === 'Mafia');
 export const communityRoles = Object.keys(roles).filter(name => roles[name].team === 'Community');
+
+export function canBeEnabler(team, drinkingPlan) {
+  const enabler = roles['The Enabler'];
+  return team === enabler.team && enabler.drinkingPlans.includes(drinkingPlan);
+}
 
 export function formatRoleTask(name, { playerCount, targetName } = {}) {
   const role = roles[name];

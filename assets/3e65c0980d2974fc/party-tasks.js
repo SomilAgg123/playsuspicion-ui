@@ -19,3 +19,12 @@ export const partyTasks = {
 export function taskBallotSize(key, participants) {
   return partyTasks[key].pairing && participants % 2 === 0 ? 2 : 1;
 }
+
+export function defaultTaskTriggerBudget(rosterSize) {
+  // One confirmed mission and first guess each, plus a recorded death for half the roster.
+  return 2 * rosterSize + Math.round(rosterSize / 2);
+}
+
+export function taskTriggerMilestone(taskNumber, budget) {
+  return Math.ceil(taskNumber * budget / Object.keys(partyTasks).length);
+}

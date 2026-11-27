@@ -1,4 +1,5 @@
 import { missions } from './missions.js';
+import { defaultTaskTriggerBudget, taskTriggerMilestone } from './party-tasks.js';
 import { canBeEnabler } from './roles.js';
 import { drawEventDrinks, eventDrinkAmount } from './drinking-plans.js';
 
@@ -155,7 +156,7 @@ function sampleTrigger(state, now, randomInt) {
   });
   const triggerCount = (state.triggerCount ?? 0) + 1;
   // The seven-person preview demonstrates the first of the twelve milestones.
-  const taskDueAt = triggerCount === Math.ceil(3 * players.length / 12) ? now + 1500 : state.taskDueAt;
+  const taskDueAt = triggerCount === taskTriggerMilestone(1, defaultTaskTriggerBudget(players.length)) ? now + 1500 : state.taskDueAt;
   return tick({ ...state, triggerCount, taskDueAt, sampleQueue }, now);
 }
 

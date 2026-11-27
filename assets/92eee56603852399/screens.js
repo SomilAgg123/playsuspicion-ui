@@ -2,6 +2,7 @@ import { revealPaper } from './role-reveal.js';
 import { drinkingPlans, planDescription, formatDrinkAmount, formatSipEstimate } from './drinking-plans.js';
 import { roles, formatRoleTask } from './roles.js';
 import { missions } from './missions.js';
+import { partyTasks, taskBallotSize } from './party-tasks.js';
 
 const discussionPages = {
   'death-report': () => "I've been killed",
@@ -104,6 +105,51 @@ function missionCard(info) {
     info.missionConfirmed ? null : 'Complete this before the final roundtable to stay alive.');
   card.classList.add('mission-card');
   return card;
+}
+
+function taskPlayerField(content, key, players) {
+  const pairs = taskBallotSize(key, players.length) === 2;
+  const field = element('label', 'game-field', pairs ? 'Which pair was last?' : 'Who was last?');
+  const select = element('select');
+  select.append(new Option(pairs ? 'Choose a pair' : 'Choose a player', ''));
+  const roster = [...players].sort((a, b) => a.name.localeCompare(b.name));
+  roster.forEach((player, index) => {
+    if (pairs) {
+      for (const partner of roster.slice(index + 1)) {
+        select.append(new Option(player.name + ' & ' + partner.name, [player.id, partner.id].join(',')));
+      }
+    } else {
+      select.append(new Option(player.name, player.id));
+    }
+  });
+  field.append(select);
+  content.append(field);
+  return select;
+}
+
+function taskScreen(content, state, dispatch) {
+  const { key, round, stage, players } = state.task;
+  const task = partyTasks[key];
+  const status = element('p');
+  status.setAttribute('role', 'status');
+  content.classList.add('discussion-content');
+  const heading = stage === 'acknowledge' ? 'You were last.' : task.prompt;
+  content.append(element('h2', 'screen-statement', heading));
+  if (stage === 'vote') {
+    if (round > 1) content.append(element('p', '', 'No majority. Vote again.'));
+    const choice = taskPlayerField(content, key, players);
+    const submit = button('Submit vote', () => dispatch({
+      type: 'task-vote', key, round, playerIds: choice.value.split(','),
+    }));
+    submit.disabled = true;
+    choice.addEventListener('change', () => { submit.disabled = !choice.value; });
+    content.append(submit);
+  } else if (stage === 'acknowledge') {
+    content.append(button('Done', () => dispatch({ type: 'acknowledge-task', key, round })));
+  } else {
+    status.textContent = stage === 'waiting-drinks' ? 'Waiting for the task to finish.' : 'Waiting for votes.';
+  }
+  content.append(status);
 }
 
 function spyForm(app, content, details, dispatch) {
@@ -426,6 +472,7 @@ export function renderScreen(app, state, dispatch, seconds) {
     content.append(next);
   }
 
+  if (state.screen === 'task-event') taskScreen(content, state, dispatch);
   if (state.screen === 'S07') {
     content.classList.add('discussion-content');
     content.append(element('h2', 'screen-statement', 'Discuss your suspicions'));
@@ -483,12 +530,19 @@ export function renderScreen(app, state, dispatch, seconds) {
     if (matchingCard) matchingCard.open = true;
   }
   const previousScreen = app.firstElementChild?.dataset.screen;
+  const previousTaskStep = app.firstElementChild?.dataset.taskStep;
+  if (state.screen === 'task-event') shell.dataset.taskStep = [state.task.key, state.task.round, state.task.stage].join('/');
   const previousDrink = app.firstElementChild?.dataset.drinkId;
   const keepSpyDialog = state.screen === 'spy' && app.querySelector('#spy-logged[open]');
   app.replaceChildren(shell);
   if (keepSpyDialog) shell.querySelector('#spy-logged')?.showModal();
   if (state.screen === 'drink' && previousDrink !== state.drink.id) content.querySelector('h2').focus();
   if (previousScreen === 'drink' && state.screen === 'S07') brand.focus();
+  if (shell.dataset.taskStep && previousTaskStep !== shell.dataset.taskStep) {
+    const heading = content.querySelector('h2');
+    heading.tabIndex = -1;
+    heading.focus();
+  }
   if (previousScreen === state.screen && Object.hasOwn(discussionPages, state.screen)) {
     content.querySelector('[role="status"]')?.focus();
   }
@@ -504,8 +558,12 @@ export function renderScreen(app, state, dispatch, seconds) {
 
 export function createNavigation() {
   let page = null;
+  let lastTaskStep;
   return {
     view(state) {
+      const step = state.task && [state.task.key, state.task.round, state.task.stage].join('/');
+      if (step !== lastTaskStep) page = null;
+      lastTaskStep = step;
       if (page === 'role' && state.canViewRole) return { ...state, screen: 'S02', page };
       if (page === 'missions' && state.missions && state.screen !== 'S06') return { ...state, screen: 'S06', page };
       if (canOpenDiscussionPage(state, page)) return { ...state, screen: page, page };

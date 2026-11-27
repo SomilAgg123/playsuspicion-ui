@@ -1,6 +1,6 @@
 import { missions } from './missions.js';
 import { canBeEnabler } from './roles.js';
-import { drawEventDrinks } from './drinking-plans.js';
+import { drawEventDrinks, eventDrinkAmount } from './drinking-plans.js';
 
 export const TURN_MS = 15_000;
 const names = ['Priya', 'Sam', 'Chad', 'Maya', 'Jordan', 'Bea'];
@@ -40,6 +40,27 @@ export function tick(state, now) {
     const [drink, ...sampleQueue] = state.sampleQueue;
     return { ...state, screen: 'drink', drink, sampleQueue };
   }
+  if (state.screen === 'S07' && state.taskDueAt != null && now >= state.taskDueAt) {
+    const players = [{ id: 'self', name: state.player.name }, ...state.buddies];
+    return { ...state, screen: 'task-event', taskDueAt: undefined,
+      task: { key: 'birthday', round: 1, stage: state.dead ? 'waiting-votes' : 'vote', players },
+      transitionAt: state.dead ? now + 1500 : undefined };
+  }
+  if (state.screen === 'task-event' && now >= state.transitionAt) {
+    if (state.task.stage === 'waiting-drinks') return { ...state, screen: 'S07', task: undefined, transitionAt: undefined };
+    const { task } = state;
+    if (!state.dead && task.round === 1) {
+      return { ...state, task: { ...task, round: 2, stage: 'vote' }, transitionAt: undefined };
+    }
+    const lost = state.previewBallot?.includes('self');
+    const amount = eventDrinkAmount({ ...state.player, joined: true }, state.buddies.length + 1);
+    if (lost && amount) {
+      return { ...state, screen: 'drink', drink: { id: 'sample-task', amount },
+        task: { ...task, stage: 'waiting-drinks' }, transitionAt: undefined };
+    }
+    const stage = lost ? 'acknowledge' : 'waiting-drinks';
+    return { ...state, task: { ...task, stage }, transitionAt: lost ? undefined : now + 1500 };
+  }
   return state;
 }
 
@@ -75,19 +96,32 @@ export function act(current, action, now, randomInt = max => Math.floor(Math.ran
     } };
   }
   if (state.screen === 'drink' && action.drinkId === state.drink.id) {
+    if (state.drink.id === 'sample-task' && action.type === 'report-drink') {
+      return { ...state, screen: 'task-event', drink: null, transitionAt: now + 1500 };
+    }
     if (action.type === 'report-drink' && !state.drink.playerName) return { ...state, screen: 'S07', drink: null };
     if (action.type === 'verify-drink' && state.drink.playerName) return { ...state, screen: 'S07', drink: null };
   }
+  if (state.screen === 'task-event' && action.key === state.task.key && action.round === state.task.round) {
+    if (action.type === 'task-vote' && state.task.stage === 'vote') {
+      return { ...state, task: { ...state.task, stage: 'waiting-votes' }, previewBallot: action.playerIds, transitionAt: now + 1500 };
+    }
+    if (action.type === 'acknowledge-task' && state.task.stage === 'acknowledge') {
+      return { ...state, screen: 'S07', task: undefined };
+    }
+  }
   if (state.screen === 'S07' && state.discussion) {
     const details = state.discussion;
-    if (action.type === 'report-death' && state.information.team === 'Community') return { ...state, dead: true };
+    if (action.type === 'report-death' && state.information.team === 'Community' && !state.dead) {
+      return sampleTrigger({ ...state, dead: true }, now, randomInt);
+    }
     if (action.type === 'confirm-observation' && !details.observationConfirmed) {
-      const sampleQueue = sampleMissionDrinks(state, randomInt);
-      return tick({ ...state, sampleQueue, discussion: { ...details, observationConfirmed: true } }, now);
+      return sampleTrigger({ ...state, discussion: { ...details, observationConfirmed: true } }, now, randomInt);
     }
     if (action.type === 'guess-mission' && !state.dead && details.spyGuess === (action.previousGuess ?? null) &&
         Number.isInteger(action.missionIndex) && action.missionIndex >= 0 && action.missionIndex < missions.length) {
-      return { ...state, discussion: { ...details, spyGuess: action.missionIndex } };
+      const next = { ...state, discussion: { ...details, spyGuess: action.missionIndex } };
+      return details.spyGuess == null ? sampleTrigger(next, now, randomInt) : next;
     }
   }
   if (action.type === 'skip' && state.screen === 'S05') return finishMic(state);
@@ -97,17 +131,21 @@ export function act(current, action, now, randomInt = max => Math.floor(Math.ran
   return state;
 }
 
-function sampleMissionDrinks(state, randomInt) {
+function sampleTrigger(state, now, randomInt) {
   const players = [
     { ...state.player, id: 'self', joined: true },
     ...names.map(name => ({ id: name, joined: true, drunkNumber: 4, drinkingPlan: 'buzz' })),
   ];
-  return drawEventDrinks(players, randomInt).flatMap(({ playerId, amount }) => {
+  const sampleQueue = drawEventDrinks(players, randomInt).flatMap(({ playerId, amount }) => {
     if (playerId === 'self') return [{ id: 'sample-own', amount }];
     // The simulated observed player reports their own assignment.
     if (playerId === state.missions.observes) return [{ id: 'sample-observed', playerName: playerId, amount }];
     return [];
   });
+  const triggerCount = (state.triggerCount ?? 0) + 1;
+  // The seven-person preview demonstrates the first of the twelve milestones.
+  const taskDueAt = triggerCount === Math.ceil(3 * players.length / 12) ? now + 1500 : state.taskDueAt;
+  return tick({ ...state, triggerCount, taskDueAt, sampleQueue }, now);
 }
 
 export function remainingSeconds(state, now) {

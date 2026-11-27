@@ -27,7 +27,7 @@ export function formatDrinkAmount(amount) {
     if (!whole) return `${fraction} of a drink`;
     return `${whole}${glyph ? '' : ' '}${fraction} drinks`;
   }
-  return drinks(amount);
+  return drinks(Number(amount.toPrecision(5)));
 }
 
 export const drinkingPlans = [
@@ -44,9 +44,14 @@ export function planDescription(plan, drunkNumber) {
   return drunkNumber == null || !Number.isFinite(total) ? plan.hint : drinks(total);
 }
 
+export function eventDrinkAmount(player, rosterSize) {
+  const multiplier = multiplierByPlan.get(player.drinkingPlan);
+  if (!player.joined || !(player.drunkNumber > 0 && multiplier > 0)) return 0;
+  return Math.max(1 / sipsPerDrink, (player.drunkNumber / (rosterSize / 2)) * multiplier);
+}
+
 export function drawEventDrinks(players, randomInt) {
-  const expectedPrompts = players.length / 2;
-  const eligible = players.filter(player => player.joined && player.drunkNumber > 0 && multiplierByPlan.get(player.drinkingPlan) > 0);
+  const eligible = players.filter(player => eventDrinkAmount(player, players.length) > 0);
   let needed = Math.floor(eligible.length / 2);
   if (eligible.length % 2) needed += randomInt(2);
   const assignments = [];
@@ -54,8 +59,7 @@ export function drawEventDrinks(players, randomInt) {
     // Taking k of the remaining n with probability k/n samples uniformly without replacement.
     if (needed === 0) break;
     if (randomInt(eligible.length - index) >= needed) continue;
-    const amount = (player.drunkNumber / expectedPrompts) * multiplierByPlan.get(player.drinkingPlan);
-    assignments.push({ playerId: player.id, amount: Math.max(1 / sipsPerDrink, amount) });
+    assignments.push({ playerId: player.id, amount: eventDrinkAmount(player, players.length) });
     needed--;
   }
   return assignments;

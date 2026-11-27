@@ -516,7 +516,7 @@ export function renderScreen(app, state, dispatch, seconds) {
     shell.dataset.drinkId = id;
     const sipEstimate = formatSipEstimate(amount);
     const drinkAmount = formatDrinkAmount(amount);
-    const card = element('p', 'game-panel drink-amount', sipEstimate ? `${sipEstimate} (${drinkAmount})` : drinkAmount);
+    const card = element('p', 'game-panel drink-amount', sipEstimate ? `${sipEstimate} or ${drinkAmount}` : drinkAmount);
     content.append(title, card,
       button(playerName ? `I saw ${playerName} drink it` : 'I drank this amount',
         () => dispatch({ type: playerName ? 'verify-drink' : 'report-drink', drinkId: id })), status);

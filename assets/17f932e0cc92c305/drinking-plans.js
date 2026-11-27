@@ -13,7 +13,7 @@ export function formatSipEstimate(amount) {
   if (estimate < 1) return 'Less than 1 sip';
   if (!Number.isFinite(estimate)) return '';
   const count = Math.round(estimate);
-  return `About ${count} ${count === 1 ? 'sip' : 'sips'}`;
+  return `${count} ${count === 1 ? 'sip' : 'sips'}`;
 }
 
 export function formatDrinkAmount(amount) {

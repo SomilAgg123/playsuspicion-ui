@@ -43,6 +43,7 @@
   --font-size-title: var(--font-size-game);
   --font-size-label: var(--font-size-game);
   --font-size-control: var(--font-size-game);
+  --font-size-drink-amount: clamp(1rem, 5.5vw, var(--font-size-game));
   --font-size-score: var(--font-size-game);
   --font-weight-body: 600;
   --font-weight-strong: 700;
@@ -518,7 +519,7 @@ body { background: var(--background-room); color: var(--color-text); font-weight
 .assignment-card summary::-webkit-details-marker { display: none; }
 .assignment-label { color: var(--color-label); overflow-wrap: anywhere; }
 .task-title { text-align: center; color: var(--color-accent); }
-.game-panel.drink-amount { padding: var(--space-3) var(--space-2); text-align: center; }
+.game-panel.drink-amount { font-size: var(--font-size-drink-amount); padding: var(--space-3) var(--space-2); text-align: center; }
 .assignment-value {
   grid-column: 1;
   overflow-wrap: anywhere;

@@ -61,6 +61,8 @@
   --poster-rule-width: 2.5rem;
   --cowboy-portrait-size: clamp(5rem, 26vw, 8rem);
   --cowboy-portrait: url('assets/suspicious-cowboy.webp');
+  --poster-portrait-size: calc(2 * var(--cowboy-portrait-size));
+  --poster-button-gap: calc(2 * var(--space-10));
   --poster-button-width: 12rem;
   --poster-opening: 750ms;
   --poster-welcome-fall: 620ms;
@@ -182,7 +184,7 @@ body { background: var(--background-room); color: var(--color-text); font-weight
   container-type: inline-size;
   justify-content: center;
   align-items: center;
-  gap: var(--space-10);
+  gap: var(--poster-button-gap);
   animation: none;
 }
 .poster-title {
@@ -203,6 +205,7 @@ body { background: var(--background-room); color: var(--color-text); font-weight
   background: var(--cowboy-portrait) center / contain no-repeat;
 }
 .poster-title::before {
+  width: var(--poster-portrait-size);
   margin-bottom: var(--space-3);
   animation: welcome-fall var(--poster-welcome-fall) var(--ease-standard) var(--poster-cowboy-start) backwards;
 }

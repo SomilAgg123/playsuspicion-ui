@@ -22,8 +22,8 @@ function element(tag, className, text) {
   return node;
 }
 
-function button(text, action, { variant = 'primary', submit = false } = {}) {
-  const node = element('button', `game-button game-button--${variant}`, text);
+function button(text, action, { submit = false } = {}) {
+  const node = element('button', 'game-button', text);
   node.type = submit ? 'submit' : 'button';
   if (action) node.addEventListener('click', action);
   return node;
@@ -61,14 +61,14 @@ function drinkingPlanField(numberInput, initialPlan, update) {
         opener.textContent = plan.label;
         update();
         dialog.close();
-      }, { variant: 'secondary' });
+      });
       option.setAttribute('aria-pressed', String(opener.value === plan.id));
       option.autofocus = opener.value === plan.id;
       option.append(element('span', 'field-description', planDescription(plan, number)));
       actions.append(option);
     }
     dialog.showModal();
-  }, { variant: 'secondary' });
+  });
   opener.id = label.htmlFor;
   opener.value = current?.id ?? '';
   opener.classList.add('plan-picker');
@@ -203,13 +203,13 @@ function discussionForm(app, content, state, dispatch) {
   const status = element('p');
   status.setAttribute('role', 'status');
   status.tabIndex = -1;
-  const back = button('Back', () => dispatch({ type: 'back' }), { variant: 'secondary' });
+  const back = button('Back', () => dispatch({ type: 'back' }));
   back.dataset.navigation = 'return';
   content.classList.add('discussion-content');
   content.append(element('h2', 'screen-statement', discussionPages[state.page](state.missions)));
   if (state.page === 'death-report') {
     if (state.dead) status.textContent = "You've been killed.";
-    else content.append(button('Confirm', () => dispatch({ type: 'report-death' }), { variant: 'destructive' }));
+    else content.append(button('Confirm', () => dispatch({ type: 'report-death' })));
   }
   if (state.page === 'observation') {
     content.append(element('p', '', details.observedMission));
@@ -248,7 +248,7 @@ export function createScreenRenderer(app, dispatch) {
   let pageSignature;
   let returnScreen;
   let displayedCheck;
-  const checksButton = button('', () => dispatch({ type: 'drink-checks' }), { variant: 'secondary' });
+  const checksButton = button('', () => dispatch({ type: 'drink-checks' }));
   checksButton.dataset.drinkChecks = '';
 
   return (state, seconds, force = false) => {
@@ -292,7 +292,7 @@ function renderScreen(app, state, dispatch, seconds) {
   header.append(brand);
   for (const [page, label, available] of [['missions', 'Missions', state.missions], ['role', 'Role', state.canViewRole]]) {
     if (!available) continue;
-    const link = button(label, () => dispatch({ type: page }), { variant: 'secondary' });
+    const link = button(label, () => dispatch({ type: page }));
     link.dataset.navigation = page;
     link.setAttribute('aria-pressed', String(state.page === page || (page === 'missions' && state.screen === 'S06')));
     header.append(link);
@@ -487,7 +487,7 @@ function renderScreen(app, state, dispatch, seconds) {
       done.disabled = seconds === 0;
       actions.append(done);
     }
-    actions.append(button('Skip', () => dispatch({ type: 'skip' }), { variant: 'secondary' }));
+    actions.append(button('Skip', () => dispatch({ type: 'skip' })));
     content.append(actions);
   }
 
@@ -526,7 +526,7 @@ function renderScreen(app, state, dispatch, seconds) {
     if (state.dead) content.append(element('p', '', "You've been killed."));
     for (const [page, labelFor] of Object.entries(discussionPages)) {
       if (!canOpenDiscussionPage(state, page)) continue;
-      const action = button(labelFor(state.missions), () => dispatch({ type: page }), { variant: 'secondary' });
+      const action = button(labelFor(state.missions), () => dispatch({ type: page }));
       if ((page === 'observation' && state.discussion.observationConfirmed) ||
           (page === 'spy' && state.discussion.spyGuess !== null)) {
         action.classList.add('completed-action');
@@ -563,7 +563,7 @@ function renderScreen(app, state, dispatch, seconds) {
       button(playerName ? `I saw ${playerName} drink it` : 'I drank this amount',
         () => dispatch({ type: playerName ? 'verify-drink' : 'report-drink', drinkId: id })), status);
     if (state.page === 'drink-checks') {
-      content.append(button('Back', () => dispatch({ type: 'back' }), { variant: 'secondary' }));
+      content.append(button('Back', () => dispatch({ type: 'back' })));
     }
   }
 

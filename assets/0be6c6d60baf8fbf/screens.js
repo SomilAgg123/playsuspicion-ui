@@ -1,4 +1,4 @@
-import { revealRole } from './role-reveal.js';
+import { revealPaper } from './role-reveal.js';
 import { drinkingPlans } from './drinking-plans.js';
 import { roles, formatRoleTask } from './roles.js';
 
@@ -117,12 +117,12 @@ export function renderScreen(app, state, dispatch, seconds) {
   const brand = element('h1', 'brand', 'Suspicion');
   brand.tabIndex = -1;
   header.append(brand);
-  if (state.canViewRole) {
-    const role = button('My Role', () => dispatch({ type: 'role' }), { variant: 'secondary' });
-    role.classList.add('role-button');
-    role.dataset.navigation = 'role';
-    role.setAttribute('aria-pressed', String(Boolean(state.viewingRole)));
-    header.append(role);
+  for (const [page, label, available] of [['missions', 'Missions', state.missions], ['role', 'Role', state.canViewRole]]) {
+    if (!available) continue;
+    const link = button(label, () => dispatch({ type: page }), { variant: 'secondary' });
+    link.dataset.navigation = page;
+    link.setAttribute('aria-pressed', String(state.page === page || (page === 'missions' && state.screen === 'S06')));
+    header.append(link);
   }
   if (state.screen !== 'welcome') shell.append(header);
   const content = element(['S00', 'S01'].includes(state.screen) ? 'form' : 'div', 'screen-content');
@@ -229,7 +229,7 @@ export function renderScreen(app, state, dispatch, seconds) {
       element('p', '', 'Everyone has a part to play. In the next screen, you’ll discover yours.'),
       goals,
       element('p', '', 'If you are voted out, there is a way to return for the final roundtable...stay tuned...'));
-    const reveal = button('Reveal my role', () => revealRole(app, dispatch));
+    const reveal = button('Reveal my role', () => revealPaper(app, () => dispatch({ type: 'reveal-role' }), 'S02'));
     reveal.classList.add('screen-action');
     content.append(brief, reveal);
   }
@@ -248,10 +248,7 @@ export function renderScreen(app, state, dispatch, seconds) {
       assignmentCard('Role', info.role, role?.character, info.roleTask ?? formatRoleTask(info.role)));
     if (info.otherMafia) list.append(assignmentCard('Other mafia', String(info.otherMafia.length), ...info.otherMafia));
     list.append(missionCard(info.mission));
-    const next = button(state.viewingRole ? 'Back' : 'Next', () => dispatch({ type: state.viewingRole ? 'back' : 'next' }));
-    next.classList.add('screen-action');
-    if (state.viewingRole) next.dataset.navigation = 'return';
-    content.append(list, next);
+    content.append(list);
   }
 
   if (state.screen === 'S03') {
@@ -308,12 +305,37 @@ export function renderScreen(app, state, dispatch, seconds) {
     content.append(actions);
   }
 
+  if (state.screen === 'mission-briefing') {
+    const brief = element('div', 'game-brief mission-briefing');
+    const heading = element('h2', 'screen-statement', 'Let the suspicion commence.');
+    heading.tabIndex = -1;
+    brief.append(heading,
+      element('p', '', 'Tonight, you’ll observe another player. They’ll ask you to confirm when they’ve completed their secret mission. You have an observer of your own.'),
+      element('p', '', 'You’re also spying on someone. Watch what they do. At the final roundtable, you’ll choose from a list and guess their secret mission. If you guess correctly, your target is killed before they can take a seat.'));
+    const reveal = button('Reveal my missions', () => revealPaper(app, () => dispatch({ type: 'reveal-missions' }), 'S06'));
+    reveal.classList.add('screen-action');
+    content.append(brief, reveal);
+  }
+
   if (state.screen === 'S06') {
-    content.classList.add('holding-content');
+    content.classList.add('missions-content');
     content.append(missionCard(state.information.mission),
-      assignmentCard('Observer', state.holding.observer, "This person confirms when you complete your mission. You can tell them when you're about to do it so they know."),
-      assignmentCard('You observe', state.holding.observes, 'Confirm when this person completes their mission. They are allowed to tell you and communicate with you about it.'),
-      assignmentCard('You spy on', state.holding.spiesOn, 'Guess this person’s secret mission to eliminate them. You have two guesses for the whole night.'));
+      assignmentCard('Observer', state.missions.observer, "This person confirms when you complete your mission. You can tell them when you're about to do it so they know."),
+      assignmentCard('You observe', state.missions.observes, 'Confirm when this person completes their mission. They are allowed to tell you and communicate with you about it.'),
+      assignmentCard('You spy on', state.missions.spiesOn, 'Guess this person’s secret mission to eliminate them. You have two guesses for the whole night.'));
+  }
+
+  if (state.screen === 'S02' || state.screen === 'S06') {
+    const advance = state.screen === 'S02' ? 'next' : 'finish-missions';
+    const next = button(state.page ? 'Back' : 'Next', () => dispatch({ type: state.page ? 'back' : advance }));
+    next.classList.add('screen-action');
+    if (state.page) next.dataset.navigation = 'return';
+    content.append(next);
+  }
+
+  if (state.screen === 'S07') {
+    content.classList.add('discussion-content');
+    content.append(element('h2', 'screen-statement', 'Discuss your suspicions'));
   }
 
   shell.append(content);
@@ -329,15 +351,32 @@ export function renderScreen(app, state, dispatch, seconds) {
   app.replaceChildren(shell);
   if ((previousScreen === 'welcome' && state.screen === 'game-info') ||
       (previousScreen === 'S01' && state.screen === 'role-briefing')) content.querySelector('h2').focus();
-  if (previousScreen === 'role-briefing' && state.screen === 'S02') brand.focus();
+  if (previousScreen !== state.screen && state.screen === 'mission-briefing') content.querySelector('h2').focus();
+  if ((previousScreen === 'role-briefing' && state.screen === 'S02') ||
+      (previousScreen === 'mission-briefing' && state.screen === 'S06') ||
+      (previousScreen === 'S06' && state.screen === 'S07')) brand.focus();
   if (previousScreen === 'game-info' && state.screen === 'S01') brand.focus();
   if (roleScroll && state.screen === 'S02') shell.querySelector('.role-details').scrollTop = roleScroll;
 }
 
-export function roleView(state, open) {
-  return open && state.canViewRole && state.information
-    ? { ...state, screen: 'S02', viewingRole: true }
-    : state;
+export function createNavigation() {
+  let page = null;
+  return {
+    view(state) {
+      if (page === 'role' && state.canViewRole) return { ...state, screen: 'S02', page };
+      if (page === 'missions' && state.missions && state.screen !== 'S06') return { ...state, screen: 'S06', page };
+      page = null;
+      return state;
+    },
+    navigate(action, state) {
+      const previous = page;
+      if (action === 'back' && page) page = null;
+      else if (action === 'role' && state.canViewRole) page = page === action ? null : action;
+      else if (action === 'missions' && state.missions) page = page === action || state.screen === 'S06' ? null : action;
+      else return;
+      return page ? '.brand' : `[data-navigation="${action === 'back' ? previous : action}"]`;
+    },
+  };
 }
 
 export function formatTime(seconds) { return `00:${String(seconds).padStart(2, '0')}`; }

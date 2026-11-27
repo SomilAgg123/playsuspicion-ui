@@ -157,11 +157,12 @@ body { background: var(--background-room); color: var(--color-text); font-weight
   padding-block: var(--space-2) var(--space-4);
   border-bottom: var(--stroke-thin) solid var(--color-border);
 }
-.game-header:has(.role-button) {
+.game-header:has([data-navigation]) {
   position: sticky;
   top: var(--space-0);
   z-index: 1;
-  justify-content: space-between;
+  gap: var(--space-2);
+  flex-wrap: wrap;
   background: var(--background-room);
 }
 .screen-content {
@@ -355,8 +356,9 @@ body { background: var(--background-room); color: var(--color-text); font-weight
 .game-button:active:not(:disabled) { background-color: var(--button-pressed); transform: translateY(var(--motion-press)); box-shadow: var(--shadow-none); }
 .game-button:disabled { background: var(--color-disabled-surface); color: var(--color-disabled-text); border-color: var(--color-border); box-shadow: var(--shadow-none); cursor: not-allowed; }
 .game-shell :focus-visible, .game-dialog :focus-visible { outline: var(--stroke-strong) solid var(--color-focus); outline-offset: var(--focus-offset); }
-.game-button.role-button { width: auto; }
-.role-button[aria-pressed="true"] { border-color: var(--color-accent); }
+.game-header .brand { margin-inline-end: auto; }
+.game-header .game-button { width: auto; padding-inline: var(--space-2); }
+.game-header .game-button[aria-pressed="true"] { border-color: var(--color-accent); }
 .screen-action { margin-top: auto; }
 
 .paper-reveal, .paper-half, .paper-flat, .paper-base, .paper-flap, .paper-edge, .paper-face {
@@ -364,7 +366,7 @@ body { background: var(--background-room); color: var(--color-text); font-weight
   inset: 0;
 }
 .paper-reveal { position: fixed; z-index: 2; overflow: hidden; pointer-events: none; }
-#app:has(> [data-screen="role-briefing"]) ~ .paper-reveal { background: var(--background-room); }
+#app:has(> [data-screen$="-briefing"]) ~ .paper-reveal { background: var(--background-room); }
 .paper-reveal .game-shell { position: absolute; inset-inline: 0; }
 .paper-reveal .screen-content { animation: none; }
 .paper-base, .paper-face { background: var(--background-room); }
@@ -463,7 +465,7 @@ body { background: var(--background-room); color: var(--color-text); font-weight
   flex: 1;
   border-top: var(--stroke-thin) solid var(--color-border);
 }
-.role-briefing { gap: var(--space-4); padding-block: var(--space-2); }
+.role-briefing, .mission-briefing { gap: var(--space-4); padding-block: var(--space-2); }
 .role-briefing .matchup {
   display: grid;
   justify-items: center;
@@ -488,9 +490,9 @@ body { background: var(--background-room); color: var(--color-text); font-weight
   padding-inline-start: var(--space-6);
 }
 .briefing-goals li + li { margin-top: var(--space-2); }
-.arrival-content { justify-content: center; }
+.arrival-content, .discussion-content { justify-content: center; }
 
-.holding-content { gap: var(--space-3); }
+.missions-content { gap: var(--space-3); }
 .assignment-card {
   background: var(--background-panel);
   border: var(--stroke-thin) solid var(--color-control-border);
@@ -621,6 +623,7 @@ body { background: var(--background-room); color: var(--color-text); font-weight
 
 /* Custom properties cannot supply media-query breakpoints. */
 @media (max-width: 360px) {
+  .game-header:has([data-navigation]) { gap: var(--space-1); }
   .game-shell { padding-inline: max(var(--space-4), env(safe-area-inset-left)) max(var(--space-4), env(safe-area-inset-right)); }
   .game-panel { padding: var(--space-4); }
 }

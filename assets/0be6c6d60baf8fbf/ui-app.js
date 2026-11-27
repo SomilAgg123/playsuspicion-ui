@@ -1,4 +1,4 @@
-import { applyTheme, createIntro, renderScreen, formatTime, roleView } from './screens.js';
+import { applyTheme, createIntro, renderScreen, formatTime, createNavigation } from './screens.js';
 import { act, tick, createScenario, acceptsPassword, remainingSeconds } from './scenario.js';
 
 applyTheme();
@@ -8,21 +8,21 @@ const sessionKey = 'suspicion-ui-unlocked';
 let unlocked = false;
 try { unlocked = sessionStorage.getItem(sessionKey) === 'yes'; } catch {}
 let state = unlocked ? createScenario() : { screen: 'S00' };
-let showingRole = false;
+const navigation = createNavigation();
 
-function render() { renderScreen(app, intro.view(roleView(state, showingRole)), dispatch, remainingSeconds(state, performance.now())); }
+function render() { renderScreen(app, intro.view(navigation.view(state)), dispatch, remainingSeconds(state, performance.now())); }
 
 function dispatch(action) {
   if (state.screen === 'S01' && intro.advance(action.type)) {
     render();
     return;
   }
-  if ((action.type === 'role' && state.canViewRole) || (action.type === 'back' && showingRole)) {
+  const focus = navigation.navigate(action.type, state);
+  if (focus) {
     state = tick(state, performance.now());
-    showingRole = action.type === 'role' ? !showingRole : false;
     render();
     window.scrollTo(0, 0);
-    app.querySelector(showingRole ? '.brand' : '[data-navigation="role"]').focus();
+    app.querySelector(focus)?.focus();
     return;
   }
   if (state.screen === 'S00') {

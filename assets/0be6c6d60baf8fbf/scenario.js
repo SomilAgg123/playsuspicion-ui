@@ -8,7 +8,6 @@ export function createScenario() {
       team: 'Mafia', role: 'Hired Gun', otherMafia: ['Priya (Mastermind)', 'Sam'],
       mission: 'Get Chad to say "monster mash"',
     },
-    holding: { observer: 'Maya', observes: 'Jordan', spiesOn: 'Bea' },
     buddies: names.map((name, index) => ({ id: `sample-${index}`, name })),
     arrived: false, selectedBuddyId: null, turnIndex: 0,
   };
@@ -16,7 +15,7 @@ export function createScenario() {
 
 export function acceptsPassword(value) { return typeof value === 'string' && value.trim().toLowerCase() === 'mafia'; }
 
-function finishMic(state) { return { ...state, screen: 'S06', mic: null }; }
+function finishMic(state) { return { ...state, screen: 'mission-briefing', mic: null }; }
 
 function withTurn(state, index, startsAt) {
   if (index >= state.turns.length) return finishMic(state);
@@ -56,6 +55,10 @@ export function act(current, action, now) {
     ];
     return withTurn({ ...state, selectedBuddyId: selected.id, turns }, 0, now);
   }
+  if (action.type === 'reveal-missions' && state.screen === 'mission-briefing') {
+    return { ...state, screen: 'S06', missions: { observer: 'Maya', observes: 'Jordan', spiesOn: 'Bea' } };
+  }
+  if (action.type === 'finish-missions' && state.screen === 'S06') return { ...state, screen: 'S07' };
   if (action.type === 'skip' && state.screen === 'S05') return finishMic(state);
   if (action.type === 'done' && state.screen === 'S05' && state.mic.canFinish && action.turnId === state.mic.turnId) {
     return withTurn(state, state.turnIndex + 1, now);

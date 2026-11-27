@@ -48,8 +48,7 @@ async function finishAnimation(node) {
   await Promise.allSettled(node.getAnimations().map(animation => animation.finished));
 }
 
-export async function revealRole(app, dispatch) {
-  const reveal = () => dispatch({ type: 'reveal-role' });
+export async function revealPaper(app, reveal, destination) {
   if (app.inert) return;
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
   if (reducedMotion.matches) return reveal();
@@ -68,14 +67,14 @@ export async function revealRole(app, dispatch) {
   app.inert = true;
   try {
     await Promise.all([finishAnimation(overlay), reveal()]);
-    if (app.firstElementChild?.dataset.screen !== 'S02' || reducedMotion.matches) return;
+    if (app.firstElementChild?.dataset.screen !== destination || reducedMotion.matches) return;
     overlay.classList.add('paper-opening');
     await finishAnimation(left);
   } finally {
     overlay.remove();
     app.inert = false;
     const current = app.firstElementChild;
-    const focusTarget = current?.dataset.screen === 'role-briefing' ? '.screen-action' : '.brand';
+    const focusTarget = current?.dataset.screen === shell.dataset.screen ? '.screen-action' : '.brand';
     current?.querySelector(focusTarget)?.focus();
   }
 }

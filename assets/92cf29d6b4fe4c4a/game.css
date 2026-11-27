@@ -371,6 +371,35 @@ body { background: var(--background-room); color: var(--color-text); font-weight
 }
 .field-description { color: var(--color-label); font-weight: var(--font-weight-body); }
 .screen-statement { font: var(--font-weight-display) var(--font-size-statement) / var(--line-height-statement) var(--font-display); text-align: center; text-wrap: balance; }
+.game-brief {
+  flex: 1;
+  align-self: center;
+  width: 100%;
+  max-width: var(--dialog-width);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding-block: var(--space-6);
+  overflow-wrap: anywhere;
+}
+.game-brief .screen-statement { text-align: start; }
+.brief-aside {
+  margin-top: var(--space-3);
+  color: var(--color-accent);
+  font-weight: var(--font-weight-strong);
+}
+.brief-objective { margin-top: var(--space-10); }
+.brief-objective .section-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin-bottom: var(--space-2);
+}
+.brief-objective .section-title::after {
+  content: '';
+  flex: 1;
+  border-top: var(--stroke-thin) solid var(--color-border);
+}
 .arrival-content { justify-content: center; }
 
 .holding-content { gap: var(--space-3); }

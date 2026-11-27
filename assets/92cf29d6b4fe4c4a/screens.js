@@ -97,11 +97,19 @@ export function renderScreen(app, state, dispatch, seconds) {
   }
 
   if (state.screen === 'game-info') {
-    const heading = element('h2', 'screen-statement', 'Game info');
+    const brief = element('div', 'game-brief');
+    const heading = element('h2', 'screen-statement', 'A game of deception, trials, and secret missions.');
     heading.tabIndex = -1;
+    const twist = element('p', 'brief-aside', 'And most importantly, drinking.');
+    const objective = element('div', 'brief-objective');
+    objective.append(
+      element('h3', 'section-title', 'Your objective'),
+      element('p', '', 'Reach the final roundtable alive. Make sure only your team is left for the final vote.')
+    );
+    brief.append(heading, twist, objective);
     const proceed = button('Continue', () => dispatch({ type: 'continue' }));
     proceed.classList.add('screen-action');
-    content.append(heading, proceed);
+    content.append(brief, proceed);
   }
 
   if (state.screen === 'S00') {

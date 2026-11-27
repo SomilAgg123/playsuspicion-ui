@@ -173,13 +173,6 @@ body { background: var(--background-room); color: var(--color-text); font-weight
   letter-spacing: var(--wordmark-tracking);
   text-transform: uppercase;
 }
-.brand::before {
-  content: '';
-  flex: none;
-  width: var(--space-6);
-  aspect-ratio: 1;
-  background: var(--cowboy-portrait) center / contain no-repeat;
-}
 .brand-word {
   display: block;
   padding-block-end: var(--space-1);
@@ -491,13 +484,13 @@ body { background: var(--background-room); color: var(--color-text); font-weight
   align-self: center;
   justify-content: center;
 }
-.game-brief {
+.intro-poster {
   position: relative;
   container-type: inline-size;
   padding: var(--poster-section-gap) var(--poster-inset);
   overflow-wrap: anywhere;
 }
-.game-brief::before {
+.intro-poster::before {
   content: '';
   position: absolute;
   inset: 0;
@@ -507,22 +500,39 @@ body { background: var(--background-room); color: var(--color-text); font-weight
   mask: var(--poster-fleck);
   pointer-events: none;
 }
-.game-brief .brand {
+.intro-poster .brand {
   flex-direction: column;
   gap: var(--space-2);
   margin-block-end: var(--poster-section-gap);
   font-size: var(--masthead-size);
 }
-.game-brief .brand::before { width: var(--space-10); }
-.game-brief .brand-word {
+.intro-poster .brand::before {
+  content: '';
+  flex: none;
+  width: var(--space-10);
+  aspect-ratio: 1;
+  background: var(--cowboy-portrait) center / contain no-repeat;
+}
+.intro-poster .brand-word {
   width: 100%;
   text-align: center;
   mask: var(--poster-fleck);
   padding-block-end: var(--space-2);
   border-bottom-width: var(--space-2);
 }
-.game-brief + .screen-action { margin-top: var(--space-0); }
-.game-brief .screen-statement { text-align: start; }
+.intro-poster + .screen-action { margin-top: var(--space-0); }
+.game-brief {
+  flex: 1;
+  align-self: center;
+  width: 100%;
+  max-width: var(--dialog-width);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding-block: var(--space-6);
+  overflow-wrap: anywhere;
+}
+.game-brief .screen-statement, .intro-poster .screen-statement { text-align: start; }
 .brief-aside {
   margin-top: var(--space-3);
   color: var(--color-accent);
@@ -717,9 +727,9 @@ body { background: var(--background-room); color: var(--color-text); font-weight
   .game-panel { padding: var(--space-4); }
 }
 @media (max-height: 42rem) {
-  .game-brief { --poster-section-gap: var(--space-3); }
-  .game-brief .brand { gap: var(--space-1); }
-  .game-brief .brand::before { width: var(--space-8); }
+  .intro-poster { --poster-section-gap: var(--space-3); }
+  .intro-poster .brand { gap: var(--space-1); }
+  .intro-poster .brand::before { width: var(--space-8); }
   .brief-objective { margin-top: var(--space-4); }
   .game-shell {
     padding-block: max(var(--space-2), env(safe-area-inset-top)) max(var(--space-2), env(safe-area-inset-bottom));

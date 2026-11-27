@@ -317,7 +317,7 @@ function renderScreen(app, state, dispatch, seconds) {
   }
 
   if (state.screen === 'game-info') {
-    const brief = element('div', 'game-brief');
+    const brief = element('div', 'intro-poster');
     const heading = element('h2', 'screen-statement', 'A game of deception, trials, and secret missions.');
     heading.tabIndex = -1;
     const twist = element('p', 'brief-aside', 'And most importantly, drinking.');

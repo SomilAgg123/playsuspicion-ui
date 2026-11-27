@@ -108,13 +108,7 @@ export function renderScreen(state, dispatch, seconds) {
     const mission = element('dl', 'info-group');
     mission.classList.add('instruction-block');
     mission.append(infoRow('Secret mission', info.mission, 'Complete this before the final roundtable to stay alive.'));
-    const observation = element('dl', 'info-group');
-    observation.append(
-      infoRow('Observer', info.observer, "This person confirms when you complete your mission. You can tell them when you're about to do it so they know."),
-      infoRow('You observe', info.observes, 'Confirm when this person completes their mission. They are allowed to tell you and communicate with you about it.'));
-    const spy = element('dl', 'info-group');
-    spy.append(infoRow('You spy on', info.spiesOn, 'Guess this person’s secret mission to eliminate them. You have two guesses for the whole night.'));
-    list.append(identity, mission, observation, spy);
+    list.append(identity, mission);
     const next = button(state.viewingRole ? 'Back' : 'Next', () => dispatch({ type: state.viewingRole ? 'back' : 'next' }));
     next.classList.add('screen-action');
     if (state.viewingRole) next.dataset.navigation = 'return';
@@ -164,12 +158,27 @@ export function renderScreen(state, dispatch, seconds) {
     pair.append(speaker, element('p', 'mic-selected', 'selected'), element('p', 'mic-name', state.mic.buddy));
     details.append(emblem, pair, timer);
     content.append(details);
+    const actions = element('div', 'mic-actions');
     if (state.mic.canFinish) {
       const done = button('Done', () => dispatch({ type: 'done', turnId: state.mic.turnId }));
       done.dataset.action = 'done';
       done.disabled = seconds === 0;
-      content.append(done);
+      actions.append(done);
     }
+    actions.append(button('Skip', () => dispatch({ type: 'skip' }), { variant: 'secondary' }));
+    content.append(actions);
+  }
+
+  if (state.screen === 'S06') {
+    const list = element('div', 'game-panel info-list');
+    const observation = element('dl', 'info-group');
+    observation.append(
+      infoRow('Observer', state.holding.observer, "This person confirms when you complete your mission. You can tell them when you're about to do it so they know."),
+      infoRow('You observe', state.holding.observes, 'Confirm when this person completes their mission. They are allowed to tell you and communicate with you about it.'));
+    const spy = element('dl', 'info-group');
+    spy.append(infoRow('You spy on', state.holding.spiesOn, 'Guess this person’s secret mission to eliminate them. You have two guesses for the whole night.'));
+    list.append(observation, spy);
+    content.append(list);
   }
 
   shell.append(content);

@@ -285,6 +285,8 @@ body { background: var(--background-room); color: var(--color-text); font-weight
 .dialog-actions .game-button { flex: 1 1 var(--timer-width); }
 
 .mic-content { text-align: center; }
+.mic-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); min-height: var(--control-height); }
+.mic-actions .game-button--secondary { grid-column: 2; }
 .mic-details { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-6); padding-block: var(--space-8); }
 .mic-emblem { display: grid; place-items: center; width: var(--medallion-size); height: var(--medallion-size); flex: 0 0 auto; border: var(--stroke-thin) solid var(--color-border); border-radius: var(--radius-round); background: var(--background-panel); box-shadow: var(--shadow-panel); }
 .mic-icon { width: var(--icon-size); height: var(--icon-size); background: var(--color-accent); mask: url('assets/mic.svg') center / contain no-repeat; }

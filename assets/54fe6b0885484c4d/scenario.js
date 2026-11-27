@@ -6,8 +6,9 @@ export function createScenario() {
     screen: 'S01', canJoin: true, canViewRole: false, player: { name: '', drunkNumber: null },
     information: {
       team: 'Mafia', role: 'Hired Gun', otherMafia: ['Priya (Mastermind)', 'Sam'],
-      mission: 'Get Chad to say "monster mash"', observer: 'Maya', observes: 'Jordan', spiesOn: 'Bea',
+      mission: 'Get Chad to say "monster mash"',
     },
+    holding: { observer: 'Maya', observes: 'Jordan', spiesOn: 'Bea' },
     buddies: names.map((name, index) => ({ id: `sample-${index}`, name })),
     arrived: false, selectedBuddyId: null, turnIndex: 0,
   };
@@ -15,7 +16,10 @@ export function createScenario() {
 
 export function acceptsPassword(value) { return typeof value === 'string' && value.trim().toLowerCase() === 'mafia'; }
 
+function finishMic(state) { return { ...state, screen: 'S06', mic: null }; }
+
 function withTurn(state, index, startsAt) {
+  if (index >= state.turns.length) return finishMic(state);
   const turn = state.turns[index];
   return {
     ...state, screen: 'S05', turnIndex: index,
@@ -25,8 +29,7 @@ function withTurn(state, index, startsAt) {
 
 export function tick(state, now) {
   if (state.screen === 'S03' && state.arrived && now >= state.transitionAt) return { ...state, screen: 'S04' };
-  while (state.screen === 'S05' && state.mic.endsAt !== null && now >= state.mic.endsAt) {
-    if (state.turnIndex === state.turns.length - 1) return { ...state, mic: { ...state.mic, canFinish: false, endsAt: null } };
+  while (state.screen === 'S05' && now >= state.mic.endsAt) {
     state = withTurn(state, state.turnIndex + 1, state.mic.endsAt);
   }
   return state;
@@ -52,6 +55,7 @@ export function act(current, action, now) {
     ];
     return withTurn({ ...state, selectedBuddyId: selected.id, turns }, 0, now);
   }
+  if (action.type === 'skip' && state.screen === 'S05') return finishMic(state);
   if (action.type === 'done' && state.screen === 'S05' && state.mic.canFinish && action.turnId === state.mic.turnId) {
     return withTurn(state, state.turnIndex + 1, now);
   }

@@ -109,6 +109,13 @@
   --timer-width: 5rem;
   --shell-width: 40rem;
   --dialog-width: 28rem;
+  --glass-crack: 220ms;
+  --glass-hold: 650ms;
+  --glass-fall: 750ms;
+  --glass-impact-size: 1.5rem;
+  --glass-ink: #382f288a;
+  --glass-glint: #fffdf3;
+  --glass-ease-fall: cubic-bezier(.36,.08,.71,.55);
   --motion-fast: 140ms;
   --motion-screen: 240ms;
   --motion-wait: 1200ms;
@@ -351,6 +358,53 @@ body { background: var(--background-room); color: var(--color-text); font-weight
 .game-button.role-button { width: auto; }
 .role-button[aria-pressed="true"] { border-color: var(--color-accent); }
 .screen-action { margin-top: auto; }
+
+.glass-reveal, .glass-pane, .glass-shard, .glass-reveal svg {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+.glass-reveal { position: fixed; z-index: 2; pointer-events: none; }
+.glass-pane, .glass-shard { background: var(--background-room); }
+.glass-reveal .game-shell { position: absolute; inset-inline: 0; }
+.glass-reveal .screen-content { animation: none; }
+.glass-reveal svg {
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: var(--glass-ink);
+  stroke-width: var(--stroke-thin);
+  filter: drop-shadow(0 var(--stroke-thin) 0 var(--glass-glint));
+}
+.glass-reveal polyline { vector-effect: non-scaling-stroke; }
+.glass-pane svg {
+  animation: glass-crack var(--glass-crack) ease-out both;
+}
+.glass-impact {
+  position: absolute;
+  left: var(--impact-x);
+  top: var(--impact-y);
+  width: var(--glass-impact-size);
+  aspect-ratio: 1;
+  background: radial-gradient(circle, var(--color-text) 12%, var(--glass-glint) 30%, var(--glass-ink) 55%, transparent 74%);
+  clip-path: polygon(50% 0, 62% 32%, 89% 15%, 75% 45%, 100% 55%, 68% 64%, 73% 99%, 47% 75%, 22% 95%, 31% 64%, 0 51%, 32% 38%, 21% 8%, 46% 29%);
+  transform: translate(-50%, -50%);
+}
+.glass-pane .glass-impact { animation: glass-hit var(--glass-hold) ease-out both; }
+.glass-shard { animation: glass-fall var(--glass-fall) var(--glass-ease-fall) both; }
+@keyframes glass-crack {
+  from { clip-path: circle(0 at var(--impact-x) var(--impact-y)); }
+  to { clip-path: circle(150vmax at var(--impact-x) var(--impact-y)); }
+}
+@keyframes glass-hit {
+  from { scale: 1.35; }
+  15%, to { scale: 1; }
+}
+@keyframes glass-fall {
+  from { transform: none; }
+  45% { opacity: 1; }
+  to { transform: translate(var(--drift), var(--drop)) rotate(var(--spin)); opacity: 0; }
+}
 
 .game-shell[data-screen="S02"] {
   height: 100vh;

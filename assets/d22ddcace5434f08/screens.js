@@ -1,3 +1,4 @@
+import { revealRole } from './role-reveal.js';
 import { drinkingPlans } from './drinking-plans.js';
 import { roles, formatRoleTask } from './roles.js';
 
@@ -228,7 +229,7 @@ export function renderScreen(app, state, dispatch, seconds) {
       element('p', '', 'Everyone has a part to play. In the next screen, you’ll discover yours.'),
       goals,
       element('p', '', 'If you are voted out, there is a way to return for the final roundtable...stay tuned...'));
-    const reveal = button('Reveal my role', () => dispatch({ type: 'reveal-role' }));
+    const reveal = button('Reveal my role', () => revealRole(app, dispatch));
     reveal.classList.add('screen-action');
     content.append(brief, reveal);
   }

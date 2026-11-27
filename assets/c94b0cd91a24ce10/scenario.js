@@ -1,4 +1,3 @@
-// Sample data and local transitions for the separately built UI test site only.
 export const TURN_MS = 15_000;
 const names = ['Priya', 'Sam', 'Chad', 'Maya', 'Jordan', 'Bea'];
 

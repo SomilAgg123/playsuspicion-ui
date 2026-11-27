@@ -2,7 +2,6 @@
    Keep new visual values here, never in screen markup or inline styles. */
 :root {
   color-scheme: dark;
-  /* Warm ink, ivory, brass, and burgundy. Controls use stronger borders than panels. */
   --color-background: #191310;
   --color-surface: #241b16;
   --color-surface-raised: #30231c;
@@ -35,7 +34,6 @@
 
   --font-body: 'Barlow Condensed', Arial, sans-serif;
   --font-display: 'Bodoni Moda', Georgia, serif;
-  /* Standard game text, plus a display size for standalone instructions. */
   --font-size-game: 1.25rem;
   --font-size-statement: clamp(1.75rem, 8vw, 2.25rem);
   --line-height-statement: 1.3;
@@ -180,7 +178,6 @@ body { color: var(--color-text); font-family: var(--font-body); font-size: var(-
 .game-field input[aria-invalid="true"] { border-color: var(--color-danger); border-style: dashed; }
 .game-field input:disabled { background: var(--color-disabled-surface); color: var(--color-disabled-text); cursor: not-allowed; }
 
-/* One control geometry. The base is primary; variants change only the palette. */
 .game-button {
   --button-background: var(--color-action);
   --button-hover: var(--color-action-hover);
@@ -243,7 +240,6 @@ body { color: var(--color-text); font-family: var(--font-body); font-size: var(-
 .role-button[aria-pressed="true"] { border-color: var(--color-accent); }
 .screen-action { margin-top: auto; }
 
-/* Information and instructions share an inset treatment, never a new palette. */
 .info-list { flex: 1; display: flex; flex-direction: column; gap: var(--space-5); }
 .info-group { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: var(--space-4); min-width: 0; }
 .info-group + .info-group:not(.instruction-block) { border-top: var(--stroke-thin) solid var(--color-border); padding-top: var(--space-5); }
@@ -263,7 +259,6 @@ body { color: var(--color-text); font-family: var(--font-body); font-size: var(-
 .instruction-block dt { color: var(--color-accent); }
 .arrival-content { justify-content: center; }
 
-/* Radio semantics remain native; selected and locked rows stay readable. */
 .buddy-list { border: 0; padding: var(--space-0); margin: var(--space-0); min-width: 0; }
 .buddy-list legend { padding: var(--space-0) var(--space-0) var(--space-4); color: var(--color-label); font-weight: var(--font-weight-medium); letter-spacing: var(--tracking-label); }
 .player-list { display: flex; flex-direction: column; gap: var(--space-3); }
@@ -289,7 +284,6 @@ body { color: var(--color-text); font-family: var(--font-body); font-size: var(-
 .buddy-choice input:focus-visible { outline: none; }
 .buddy-choice:active:not(:has(input:disabled)) { background: var(--color-surface-inset); }
 
-/* Reserved primitives for approved future screens; no extra live UI. */
 .player-avatar { display: inline-grid; place-items: center; width: var(--avatar-size); height: var(--avatar-size); flex: 0 0 auto; border: var(--stroke-thin) solid var(--color-control-border); border-radius: var(--radius-round); background: var(--color-surface-raised); color: var(--color-accent); font-weight: var(--font-weight-strong); object-fit: cover; }
 .score-value { font-size: var(--font-size-score); font-weight: var(--font-weight-strong); font-variant-numeric: tabular-nums; }
 .result-panel { border-color: var(--color-accent); }
@@ -310,7 +304,6 @@ body { color: var(--color-text); font-family: var(--font-body); font-size: var(-
 .mic-selected { color: var(--color-label); }
 .mic-timer { min-width: var(--timer-width); padding: var(--space-2) var(--space-4); background: var(--color-surface-inset); border: var(--stroke-thin) solid var(--color-border); border-radius: var(--radius-pill); color: var(--color-accent); font-variant-numeric: tabular-nums; letter-spacing: var(--tracking-numeric); }
 
-/* Busy feedback retains existing labels. No invented waiting copy or counters. */
 .waiting-indicator { display: inline-flex; align-items: center; gap: var(--space-3); }
 .game-button[aria-busy="true"]::after, .waiting-indicator::after { content: ''; display: inline-block; width: var(--spinner-size); height: var(--spinner-size); flex: 0 0 auto; border: var(--stroke-strong) solid var(--color-border); border-top-color: var(--color-accent); border-radius: var(--radius-round); animation: waiting-spin var(--motion-wait) var(--ease-linear) infinite; }
 .game-button[aria-pressed="true"]:disabled { color: var(--color-accent); border-color: var(--color-control-border); }
@@ -333,7 +326,6 @@ body { color: var(--color-text); font-family: var(--font-body); font-size: var(-
   .game-shell :focus-visible, .buddy-choice:has(input:focus-visible), .game-dialog :focus-visible { outline-color: Highlight; }
 }
 
-/* Bundled original font faces; descriptors cannot reference CSS variables. */
 @font-face {
   font-family: 'Barlow Condensed';
   font-style: normal;

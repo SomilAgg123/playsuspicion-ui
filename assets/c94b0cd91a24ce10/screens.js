@@ -176,7 +176,6 @@ export function renderScreen(state, dispatch, seconds) {
   return shell;
 }
 
-// The server/scenario screen keeps advancing while the player reads their role.
 export function roleView(state, open) {
   return open && state.canViewRole && state.information
     ? { ...state, screen: 'S02', viewingRole: true }
@@ -185,7 +184,6 @@ export function roleView(state, open) {
 
 export function formatTime(seconds) { return `00:${String(seconds).padStart(2, '0')}`; }
 
-// Browser chrome follows the CSS token instead of duplicating its color in HTML.
 export function applyTheme() {
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content',
     getComputedStyle(document.documentElement).getPropertyValue('--color-background').trim());

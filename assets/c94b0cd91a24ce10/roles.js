@@ -1,5 +1,3 @@
-// Approved character and task copy, shared by role assignment and both player UIs.
-// These descriptions do not implement the later role actions.
 export const roles = {
   Mastermind: {
     team: 'Mafia',
@@ -73,7 +71,6 @@ export const communityRoles = Object.keys(roles).filter(name => roles[name].team
 
 export function formatRoleTask(name, { playerCount, targetName } = {}) {
   const role = roles[name];
-  // Older saved games may predate role targets. Never display an unresolved placeholder.
   if (!role || (role.targetTeam && !targetName)) return null;
   if (role.task.includes('[LIMIT]') && !Number.isInteger(playerCount)) return null;
   return role.task.replace(/\[(?:PERSON|COMMUNITY PERSON|MAFIA PERSON|LIMIT)\]/g,

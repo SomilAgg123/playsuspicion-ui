@@ -5,9 +5,10 @@ applyTheme();
 const app = document.getElementById('app');
 const intro = createIntro();
 const sessionKey = 'suspicion-ui-unlocked';
+const sampleTeam = new URLSearchParams(location.search).get('team');
 let unlocked = false;
 try { unlocked = sessionStorage.getItem(sessionKey) === 'yes'; } catch {}
-let state = unlocked ? createScenario() : { screen: 'S00' };
+let state = unlocked ? createScenario(sampleTeam) : { screen: 'S00' };
 const navigation = createNavigation();
 
 function render() { renderScreen(app, intro.view(navigation.view(state)), dispatch, remainingSeconds(state, performance.now())); }
@@ -34,7 +35,7 @@ function dispatch(action) {
       return;
     }
     try { sessionStorage.setItem(sessionKey, 'yes'); } catch {}
-    state = createScenario();
+    state = createScenario(sampleTeam);
   } else {
     state = act(state, action, performance.now());
   }

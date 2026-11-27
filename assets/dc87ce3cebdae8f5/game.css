@@ -142,7 +142,7 @@ body { background: var(--background-room); color: var(--color-text); font-weight
   gap: var(--space-6);
 }
 .game-shell :where(h1, h2, p, dl, dd) { margin: var(--space-0); }
-.game-shell :where(input, button, legend) { font-size: var(--font-size-control); }
+.game-shell :where(input, select, button, legend) { font-size: var(--font-size-control); }
 .brand, .section-title {
   margin: var(--space-0);
   font-family: var(--font-display);
@@ -279,7 +279,7 @@ body { background: var(--background-room); color: var(--color-text); font-weight
 }
 .form-fields { display: flex; flex-direction: column; gap: var(--space-6); }
 .game-field { display: flex; flex-direction: column; gap: var(--space-2); color: var(--color-label); font-size: var(--font-size-label); font-weight: var(--font-weight-strong); }
-.game-field input {
+.game-field :is(input, select) {
   width: 100%;
   min-width: 0;
   min-height: var(--control-height);
@@ -491,6 +491,7 @@ body { background: var(--background-room); color: var(--color-text); font-weight
 }
 .briefing-goals li + li { margin-top: var(--space-2); }
 .arrival-content, .discussion-content { justify-content: center; }
+.discussion-content [role="status"]:empty { display: none; }
 
 .missions-content { gap: var(--space-3); }
 .assignment-card {

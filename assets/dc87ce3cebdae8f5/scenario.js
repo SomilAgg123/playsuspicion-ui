@@ -1,11 +1,12 @@
 export const TURN_MS = 15_000;
 const names = ['Priya', 'Sam', 'Chad', 'Maya', 'Jordan', 'Bea'];
 
-export function createScenario() {
+export function createScenario(team = 'mafia') {
   return {
     screen: 'S01', canJoin: true, canViewRole: false, player: { name: '', drunkNumber: null },
     information: {
-      team: 'Mafia', role: 'Hired Gun', otherMafia: ['Priya (Mastermind)', 'Sam'],
+      ...(team === 'community' ? { team: 'Community', role: 'Socrates' } :
+        { team: 'Mafia', role: 'Hired Gun', otherMafia: ['Priya (Mastermind)', 'Sam'] }),
       mission: 'Get Chad to say "monster mash"',
     },
     buddies: names.map((name, index) => ({ id: `sample-${index}`, name })),
@@ -58,7 +59,23 @@ export function act(current, action, now) {
   if (action.type === 'reveal-missions' && state.screen === 'mission-briefing') {
     return { ...state, screen: 'S06', missions: { observer: 'Maya', observes: 'Jordan', spiesOn: 'Bea' } };
   }
-  if (action.type === 'finish-missions' && state.screen === 'S06') return { ...state, screen: 'S07' };
+  if (action.type === 'finish-missions' && state.screen === 'S06') {
+    const next = { ...state, screen: 'S07' };
+    if (state.information.team === 'Community') {
+      next.discussion = { observedMission: 'Give Sam a hug', observationConfirmed: false, guesses: [], spyCorrect: false };
+    }
+    return next;
+  }
+  if (state.screen === 'S07' && state.discussion) {
+    const details = state.discussion;
+    if (action.type === 'report-death') return { ...state, dead: true };
+    if (action.type === 'confirm-observation') return { ...state, discussion: { ...details, observationConfirmed: true } };
+    if (action.type === 'guess-mission' && !state.dead && !details.spyCorrect && details.guesses.length < 2 &&
+        action.attempt === details.guesses.length + 1 && !details.guesses.includes(action.missionIndex) &&
+        Number.isInteger(action.missionIndex) && action.missionIndex >= 0 && action.missionIndex < 4) {
+      return { ...state, discussion: { ...details, guesses: [...details.guesses, action.missionIndex], spyCorrect: action.missionIndex === 2 } };
+    }
+  }
   if (action.type === 'skip' && state.screen === 'S05') return finishMic(state);
   if (action.type === 'done' && state.screen === 'S05' && state.mic.canFinish && action.turnId === state.mic.turnId) {
     return withTurn(state, state.turnIndex + 1, now);

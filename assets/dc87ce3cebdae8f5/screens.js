@@ -1,6 +1,13 @@
 import { revealPaper } from './role-reveal.js';
 import { drinkingPlans } from './drinking-plans.js';
 import { roles, formatRoleTask } from './roles.js';
+import { missions, spyGuessLimit } from './missions.js';
+
+const discussionPages = {
+  'death-report': "I've been killed",
+  observation: "I've observed a secret mission",
+  spy: 'I spy a secret mission',
+};
 
 function element(tag, className, text) {
   const node = document.createElement(tag);
@@ -91,6 +98,62 @@ function missionCard(mission) {
   const card = assignmentCard('Secret Mission', null, mission, 'Complete this before the final roundtable to stay alive.');
   card.classList.add('mission-card');
   return card;
+}
+
+function discussionForm(content, state, dispatch) {
+  const details = state.discussion;
+  const status = element('p');
+  status.setAttribute('role', 'status');
+  status.tabIndex = -1;
+  const back = button('Back', () => dispatch({ type: 'back' }), { variant: 'secondary' });
+  back.dataset.navigation = 'return';
+  content.classList.add('discussion-content');
+  content.append(element('h2', 'screen-statement', discussionPages[state.page]));
+  if (state.page === 'death-report') {
+    if (state.dead) status.textContent = "You've been killed.";
+    else content.append(button('Confirm', () => dispatch({ type: 'report-death' }), { variant: 'destructive' }));
+  }
+  if (state.page === 'observation') {
+    content.append(assignmentCard('You observe', state.missions.observes), element('p', '', details.observedMission));
+    if (details.observationConfirmed) status.textContent = 'Mission confirmed.';
+    else content.append(button('Confirm', () => dispatch({ type: 'confirm-observation' })));
+  }
+  if (state.page === 'spy') {
+    content.append(assignmentCard('You spy on', state.missions.spiesOn));
+    const remaining = spyGuessLimit - details.guesses.length;
+    if (details.spyCorrect) status.textContent = 'Correct guess. Your target has been killed.';
+    else if (state.dead) status.textContent = 'Dead players cannot spy.';
+    else {
+      const count = remaining === 1 ? '1 guess left.' : `${remaining} guesses left.`;
+      status.textContent = details.guesses.length ? `Incorrect guess. ${count}` : count;
+      if (remaining > 0) {
+        const field = element('label', 'game-field');
+        const label = element('span', '', 'Secret Mission');
+        label.id = 'spy-mission-label';
+        const select = element('select');
+        select.setAttribute('aria-labelledby', label.id);
+        const empty = element('option', '', 'Choose a mission');
+        empty.value = '';
+        empty.disabled = true;
+        empty.selected = true;
+        select.append(empty);
+        missions.forEach((mission, index) => {
+          const option = element('option', '', mission('someone'));
+          option.value = String(index);
+          option.disabled = details.guesses.includes(index);
+          select.append(option);
+        });
+        field.append(label, select);
+        const submit = button('Submit guess', () => dispatch({
+          type: 'guess-mission', missionIndex: Number(select.value), attempt: details.guesses.length + 1,
+        }));
+        submit.disabled = true;
+        select.addEventListener('change', () => { submit.disabled = select.value === ''; });
+        content.append(field, submit);
+      }
+    }
+  }
+  content.append(status, back);
 }
 
 // The intro belongs to the joining browser. The server still controls the player's game screen.
@@ -311,7 +374,9 @@ export function renderScreen(app, state, dispatch, seconds) {
     heading.tabIndex = -1;
     brief.append(heading,
       element('p', '', 'Tonight, you’ll observe another player. They’ll ask you to confirm when they’ve completed their secret mission. You have an observer of your own.'),
-      element('p', '', 'You’re also spying on someone. Watch what they do. At the final roundtable, you’ll choose from a list and guess their secret mission. If you guess correctly, your target is killed before they can take a seat.'));
+      element('p', '', state.information.team === 'Community'
+        ? 'You’re also spying on someone. Watch what they do. You can guess their secret mission during discussion or at the final roundtable. You have two guesses for the whole night. A correct guess kills your target.'
+        : 'You’re also spying on someone. Watch what they do. At the final roundtable, you’ll choose from a list and guess their secret mission. If you guess correctly, your target is killed before they can take a seat.'));
     const reveal = button('Reveal my missions', () => revealPaper(app, () => dispatch({ type: 'reveal-missions' }), 'S06'));
     reveal.classList.add('screen-action');
     content.append(brief, reveal);
@@ -336,7 +401,16 @@ export function renderScreen(app, state, dispatch, seconds) {
   if (state.screen === 'S07') {
     content.classList.add('discussion-content');
     content.append(element('h2', 'screen-statement', 'Discuss your suspicions'));
+    if (state.dead) content.append(element('p', '', "You've been killed."));
+    if (state.discussion) {
+      for (const [page, label] of Object.entries(discussionPages)) {
+        const action = button(label, () => dispatch({ type: page }), { variant: 'secondary' });
+        action.dataset.navigation = page;
+        content.append(action);
+      }
+    }
   }
+  if (Object.hasOwn(discussionPages, state.screen)) discussionForm(content, state, dispatch);
 
   shell.append(content);
   // A background game transition can redraw the role the player is reading.
@@ -349,6 +423,9 @@ export function renderScreen(app, state, dispatch, seconds) {
   }
   const previousScreen = app.firstElementChild?.dataset.screen;
   app.replaceChildren(shell);
+  if (previousScreen === state.screen && Object.hasOwn(discussionPages, state.screen)) {
+    content.querySelector('[role="status"]')?.focus();
+  }
   if ((previousScreen === 'welcome' && state.screen === 'game-info') ||
       (previousScreen === 'S01' && state.screen === 'role-briefing')) content.querySelector('h2').focus();
   if (previousScreen !== state.screen && state.screen === 'mission-briefing') content.querySelector('h2').focus();
@@ -365,6 +442,7 @@ export function createNavigation() {
     view(state) {
       if (page === 'role' && state.canViewRole) return { ...state, screen: 'S02', page };
       if (page === 'missions' && state.missions && state.screen !== 'S06') return { ...state, screen: 'S06', page };
+      if (state.screen === 'S07' && state.discussion && Object.hasOwn(discussionPages, page)) return { ...state, screen: page, page };
       page = null;
       return state;
     },
@@ -373,6 +451,7 @@ export function createNavigation() {
       if (action === 'back' && page) page = null;
       else if (action === 'role' && state.canViewRole) page = page === action ? null : action;
       else if (action === 'missions' && state.missions) page = page === action || state.screen === 'S06' ? null : action;
+      else if (state.screen === 'S07' && state.discussion && Object.hasOwn(discussionPages, action)) page = action;
       else return;
       return page ? '.brand' : `[data-navigation="${action === 'back' ? previous : action}"]`;
     },

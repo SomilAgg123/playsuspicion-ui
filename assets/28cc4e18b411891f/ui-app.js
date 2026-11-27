@@ -1,6 +1,7 @@
-import { renderScreen, formatTime, roleView } from './screens.js';
+import { applyTheme, renderScreen, formatTime, roleView } from './screens.js';
 import { act, tick, createScenario, acceptsPassword, remainingSeconds } from './scenario.js';
 
+applyTheme();
 const app = document.getElementById('app');
 const sessionKey = 'suspicion-ui-unlocked';
 let unlocked = false;

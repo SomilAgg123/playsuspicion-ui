@@ -7,10 +7,10 @@ function element(tag, className, text) {
   return node;
 }
 
-function button(text, action) {
-  const node = element('button', 'game-button', text);
-  node.type = 'button';
-  node.addEventListener('click', action);
+function button(text, action, { variant = 'primary', submit = false } = {}) {
+  const node = element('button', `game-button game-button--${variant}`, text);
+  node.type = submit ? 'submit' : 'button';
+  if (action) node.addEventListener('click', action);
   return node;
 }
 
@@ -40,7 +40,7 @@ export function renderScreen(state, dispatch, seconds) {
   brand.tabIndex = -1;
   header.append(brand);
   if (state.canViewRole) {
-    const role = button('My Role', () => dispatch({ type: 'role' }));
+    const role = button('My Role', () => dispatch({ type: 'role' }), { variant: 'secondary' });
     role.classList.add('role-button');
     role.dataset.navigation = 'role';
     role.setAttribute('aria-pressed', String(Boolean(state.viewingRole)));
@@ -52,8 +52,8 @@ export function renderScreen(state, dispatch, seconds) {
   if (state.screen === 'S00') {
     const password = field('Password', 'password', 'password', '');
     password.input.autocomplete = 'current-password';
-    const enter = element('button', 'game-button screen-action', 'Enter');
-    enter.type = 'submit';
+    const enter = button('Enter', null, { submit: true });
+    enter.classList.add('screen-action');
     enter.disabled = true;
     password.input.addEventListener('input', () => {
       password.input.removeAttribute('aria-invalid');
@@ -63,7 +63,9 @@ export function renderScreen(state, dispatch, seconds) {
       event.preventDefault();
       if (!enter.disabled) dispatch({ type: 'unlock', password: password.input.value });
     });
-    content.append(password.wrapper, enter);
+    const fields = element('div', 'game-panel form-fields');
+    fields.append(password.wrapper);
+    content.append(fields, enter);
   }
 
   if (state.screen === 'S01') {
@@ -73,8 +75,8 @@ export function renderScreen(state, dispatch, seconds) {
     hint.id = 'drunk-number-description';
     number.input.setAttribute('aria-describedby', hint.id);
     number.wrapper.append(hint);
-    const next = element('button', 'game-button screen-action', 'Next');
-    next.type = 'submit';
+    const next = button('Next', null, { submit: true });
+    next.classList.add('screen-action');
     const update = () => {
       const value = number.input.value;
       next.disabled = !state.canJoin || !name.input.value.trim() || value === '' || !Number.isFinite(Number(value)) || Number(value) < 0;
@@ -84,13 +86,15 @@ export function renderScreen(state, dispatch, seconds) {
       event.preventDefault();
       if (!next.disabled) dispatch({ type: 'join', name: name.input.value.trim(), drunkNumber: Number(number.input.value) });
     });
-    content.append(name.wrapper, number.wrapper, next);
+    const fields = element('div', 'game-panel form-fields');
+    fields.append(name.wrapper, number.wrapper);
+    content.append(fields, next);
     update();
   }
 
   if (state.screen === 'S02') {
     const info = state.information;
-    const list = element('div', 'info-list');
+    const list = element('div', 'game-panel info-list');
     const identity = element('dl', 'info-group');
     const teamGoal = info.team === 'Mafia'
       ? 'Keep at least one mafia member alive when the final roundtable ends.'
@@ -102,6 +106,7 @@ export function renderScreen(state, dispatch, seconds) {
     identity.append(infoRow('Team', info.team, teamGoal), roleRow);
     if (info.otherMafia) identity.append(infoRow('Other mafia', info.otherMafia.join(', ')));
     const mission = element('dl', 'info-group');
+    mission.classList.add('instruction-block');
     mission.append(infoRow('Secret mission', info.mission, 'Complete this before the final roundtable to stay alive.'));
     const observation = element('dl', 'info-group');
     observation.append(
@@ -121,20 +126,24 @@ export function renderScreen(state, dispatch, seconds) {
     const arrived = button("I've arrived", () => dispatch({ type: 'arrive' }));
     arrived.disabled = state.arrived;
     arrived.setAttribute('aria-pressed', String(state.arrived));
+    arrived.setAttribute('aria-busy', String(state.arrived));
     content.append(element('p', 'arrival-description screen-statement', 'Press this button once you’ve arrived at the rendezvous point.'), arrived);
   }
 
   if (state.screen === 'S04') {
     const list = element('fieldset', 'buddy-list');
-    list.append(element('legend', '', 'Buddy'));
+    list.setAttribute('aria-busy', String(Boolean(state.selectedBuddyId)));
+    list.append(element('legend', state.selectedBuddyId ? 'waiting-indicator' : '', 'Buddy'));
+    const players = element('div', 'player-list');
     state.buddies.forEach(buddy => {
       const choice = element('label', 'buddy-choice');
       const input = element('input');
       Object.assign(input, { type: 'radio', name: 'buddy', value: buddy.id, checked: state.selectedBuddyId === buddy.id, disabled: Boolean(state.selectedBuddyId) });
       input.addEventListener('change', () => dispatch({ type: 'buddy', playerId: buddy.id }));
-      choice.append(input, document.createTextNode(buddy.name));
-      list.append(choice);
+      choice.append(input, element('span', 'player-name', buddy.name));
+      players.append(choice);
     });
+    list.append(players);
     content.append(list);
   }
 
@@ -143,12 +152,17 @@ export function renderScreen(state, dispatch, seconds) {
     const details = element('div', 'mic-details');
     const mic = element('span', 'mic-icon');
     mic.setAttribute('aria-hidden', 'true');
+    const emblem = element('span', 'mic-emblem');
+    emblem.setAttribute('aria-hidden', 'true');
+    emblem.append(mic);
     const speaker = element('p', 'mic-name', state.mic.speaker);
     speaker.setAttribute('aria-live', 'polite');
     const timer = element('p', 'mic-timer', formatTime(seconds));
     timer.setAttribute('role', 'timer');
     timer.setAttribute('aria-label', 'Time remaining');
-    details.append(mic, speaker, element('p', 'mic-selected', 'selected'), element('p', 'mic-name', state.mic.buddy), timer);
+    const pair = element('div', 'mic-pair');
+    pair.append(speaker, element('p', 'mic-selected', 'selected'), element('p', 'mic-name', state.mic.buddy));
+    details.append(emblem, pair, timer);
     content.append(details);
     if (state.mic.canFinish) {
       const done = button('Done', () => dispatch({ type: 'done', turnId: state.mic.turnId }));
@@ -170,3 +184,9 @@ export function roleView(state, open) {
 }
 
 export function formatTime(seconds) { return `00:${String(seconds).padStart(2, '0')}`; }
+
+// Browser chrome follows the CSS token instead of duplicating its color in HTML.
+export function applyTheme() {
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content',
+    getComputedStyle(document.documentElement).getPropertyValue('--color-background').trim());
+}

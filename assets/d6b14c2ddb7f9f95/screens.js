@@ -1,3 +1,5 @@
+import { roles, formatRoleTask } from './roles.js';
+
 function element(tag, className, text) {
   const node = document.createElement(tag);
   if (className) node.className = className;
@@ -22,9 +24,10 @@ function field(label, name, type, value) {
   return { wrapper, input };
 }
 
-function infoRow(label, value, className = '') {
-  const row = element('div', `info-row ${className}`);
+function infoRow(label, value, description) {
+  const row = element('div', 'info-row');
   row.append(element('dt', '', `${label}:`), element('dd', '', value));
+  if (description) row.append(element('dd', 'info-description', description));
   return row;
 }
 
@@ -32,7 +35,18 @@ export function renderScreen(state, dispatch, seconds) {
   const shell = element('section', 'game-shell');
   shell.dataset.screen = state.screen;
   shell.setAttribute('aria-label', 'Game screen');
-  shell.append(element('h1', 'brand', 'Suspicion'));
+  const header = element('header', 'game-header');
+  const brand = element('h1', 'brand', 'Suspicion');
+  brand.tabIndex = -1;
+  header.append(brand);
+  if (state.canViewRole) {
+    const role = button('My Role', () => dispatch({ type: 'role' }));
+    role.classList.add('role-button');
+    role.dataset.navigation = 'role';
+    role.setAttribute('aria-pressed', String(Boolean(state.viewingRole)));
+    header.append(role);
+  }
+  shell.append(header);
   const content = element(['S00', 'S01'].includes(state.screen) ? 'form' : 'div', 'screen-content');
 
   if (state.screen === 'S00') {
@@ -55,6 +69,10 @@ export function renderScreen(state, dispatch, seconds) {
   if (state.screen === 'S01') {
     const name = field('Name', 'name', 'text', state.player.name);
     const number = field('Drunk number', 'drunkNumber', 'number', state.player.drunkNumber);
+    const hint = element('span', 'field-description', 'Type the number of drinks it takes to get drunk.');
+    hint.id = 'drunk-number-description';
+    number.input.setAttribute('aria-describedby', hint.id);
+    number.wrapper.append(hint);
     const next = element('button', 'game-button screen-action', 'Next');
     next.type = 'submit';
     const update = () => {
@@ -72,22 +90,38 @@ export function renderScreen(state, dispatch, seconds) {
 
   if (state.screen === 'S02') {
     const info = state.information;
-    const list = element('dl', 'info-list');
-    list.append(infoRow('Team', info.team), infoRow('Role', info.role));
-    if (info.otherMafia) list.append(infoRow('Other mafia', info.otherMafia.join(', ')));
-    list.append(infoRow('Secret mission', info.mission, 'info-row--mission'),
-      infoRow('Observer', info.observer), infoRow('You observe', info.observes), infoRow('You spy on', info.spiesOn));
+    const list = element('div', 'info-list');
+    const identity = element('dl', 'info-group');
+    const teamGoal = info.team === 'Mafia'
+      ? 'Keep at least one mafia member alive when the final roundtable ends.'
+      : 'Eliminate every mafia member before ending the final roundtable.';
+    const role = roles[info.role];
+    const roleRow = infoRow('Role', info.role, role?.character);
+    const task = info.roleTask ?? formatRoleTask(info.role);
+    if (task) roleRow.append(element('dd', 'role-task', task));
+    identity.append(infoRow('Team', info.team, teamGoal), roleRow);
+    if (info.otherMafia) identity.append(infoRow('Other mafia', info.otherMafia.join(', ')));
+    const mission = element('dl', 'info-group');
+    mission.append(infoRow('Secret mission', info.mission, 'Complete this before the final roundtable to stay alive.'));
+    const observation = element('dl', 'info-group');
+    observation.append(
+      infoRow('Observer', info.observer, "This person confirms when you complete your mission. You can tell them when you're about to do it so they know."),
+      infoRow('You observe', info.observes, 'Confirm when this person completes their mission. They are allowed to tell you and communicate with you about it.'));
+    const spy = element('dl', 'info-group');
+    spy.append(infoRow('You spy on', info.spiesOn, 'Guess this person’s secret mission to eliminate them. You have two guesses for the whole night.'));
+    list.append(identity, mission, observation, spy);
     const next = button('Next', () => dispatch({ type: 'next' }));
     next.classList.add('screen-action');
+    if (state.viewingRole) next.dataset.navigation = 'return';
     content.append(list, next);
   }
 
   if (state.screen === 'S03') {
     content.classList.add('arrival-content');
-    const arrived = button('Arrived', () => dispatch({ type: 'arrive' }));
+    const arrived = button("I've arrived", () => dispatch({ type: 'arrive' }));
     arrived.disabled = state.arrived;
     arrived.setAttribute('aria-pressed', String(state.arrived));
-    content.append(arrived);
+    content.append(element('p', 'arrival-description', 'Press this button once you’ve arrived at the rendezvous point.'), arrived);
   }
 
   if (state.screen === 'S04') {
@@ -126,6 +160,13 @@ export function renderScreen(state, dispatch, seconds) {
 
   shell.append(content);
   return shell;
+}
+
+// The server/scenario screen keeps advancing while the player reads their role.
+export function roleView(state, open) {
+  return open && state.canViewRole && state.information
+    ? { ...state, screen: 'S02', viewingRole: true }
+    : state;
 }
 
 export function formatTime(seconds) { return `00:${String(seconds).padStart(2, '0')}`; }

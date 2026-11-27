@@ -1,4 +1,4 @@
-import { renderScreen, formatTime } from './screens.js';
+import { renderScreen, formatTime, roleView } from './screens.js';
 import { act, tick, createScenario, acceptsPassword, remainingSeconds } from './scenario.js';
 
 const app = document.getElementById('app');
@@ -6,10 +6,25 @@ const sessionKey = 'suspicion-ui-unlocked';
 let unlocked = false;
 try { unlocked = sessionStorage.getItem(sessionKey) === 'yes'; } catch {}
 let state = unlocked ? createScenario() : { screen: 'S00' };
+let showingRole = false;
 
-function render() { app.replaceChildren(renderScreen(state, dispatch, remainingSeconds(state, performance.now()))); }
+function render() { app.replaceChildren(renderScreen(roleView(state, showingRole), dispatch, remainingSeconds(state, performance.now()))); }
 
 function dispatch(action) {
+  if (action.type === 'role' && state.canViewRole) {
+    showingRole = true;
+    render();
+    window.scrollTo(0, 0);
+    app.querySelector('.brand').focus();
+    return;
+  }
+  if (action.type === 'next' && showingRole) {
+    state = tick(state, performance.now());
+    showingRole = false;
+    render();
+    app.querySelector('[data-navigation="role"]').focus();
+    return;
+  }
   if (state.screen === 'S00') {
     if (action.type !== 'unlock') return;
     if (!acceptsPassword(action.password)) {

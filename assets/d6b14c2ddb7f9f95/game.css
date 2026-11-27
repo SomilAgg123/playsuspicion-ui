@@ -40,12 +40,22 @@ body { color: var(--color-text); }
 }
 .game-shell h1, .game-shell p, .game-shell dl, .game-shell dd { margin: 0; }
 .game-shell h1, .game-shell input, .game-shell button, .game-shell legend { font-size: inherit; }
+.game-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--color-background);
+  padding-block: var(--space-1) var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+}
 .game-shell .brand {
   font-family: var(--font-display);
   font-weight: 700;
   line-height: 1.45;
-  padding-bottom: var(--space-2);
-  border-bottom: 1px solid var(--color-border);
 }
 .screen-content { flex: 1; display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; }
 .game-field { display: flex; flex-direction: column; gap: var(--space-1); color: var(--color-label); }
@@ -76,13 +86,20 @@ body { color: var(--color-text); }
 }
 .game-button:active:not(:disabled) { background: var(--color-action-pressed); }
 .game-button:disabled { opacity: 0.55; cursor: default; }
+.role-button { width: auto; flex: 0 0 auto; background: var(--color-background); }
+.role-button[aria-pressed="true"] { border-color: var(--color-label); }
 .game-shell :focus-visible { outline: 2px solid var(--color-label); outline-offset: 4px; }
 .screen-action { margin-top: auto; }
-.info-list { display: flex; flex-direction: column; gap: var(--space-2); }
+.info-list { flex: 1; display: flex; flex-direction: column; }
+.info-group { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: var(--space-2); padding-block: var(--space-3); }
+.info-group:first-child { padding-top: 0; }
+.info-group + .info-group { border-top: 1px solid var(--color-border); }
 .info-row { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: var(--space-1); }
 .info-row dt { color: var(--color-label); }
 .info-row dd { overflow-wrap: anywhere; min-width: 0; }
-.info-row--mission { border-block: 1px solid var(--color-border); padding-block: var(--space-2); }
+.info-description { flex-basis: 100%; padding-top: var(--space-1); color: var(--color-label); }
+.role-task { flex-basis: 100%; padding-top: var(--space-1); }
+.field-description, .arrival-description { color: var(--color-label); }
 .arrival-content { justify-content: center; }
 .buddy-list { border: 0; padding: 0; margin: 0; min-width: 0; }
 .buddy-list legend { padding: 0 0 var(--space-2); color: var(--color-label); }

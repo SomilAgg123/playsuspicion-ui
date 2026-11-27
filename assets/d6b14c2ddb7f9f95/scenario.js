@@ -4,7 +4,7 @@ const names = ['Priya', 'Sam', 'Chad', 'Maya', 'Jordan', 'Bea'];
 
 export function createScenario() {
   return {
-    screen: 'S01', canJoin: true, player: { name: '', drunkNumber: null },
+    screen: 'S01', canJoin: true, canViewRole: false, player: { name: '', drunkNumber: null },
     information: {
       team: 'Mafia', role: 'Hired Gun', otherMafia: ['Priya (Mastermind)', 'Sam'],
       mission: 'Get Chad to say "monster mash"', observer: 'Maya', observes: 'Jordan', spiesOn: 'Bea',
@@ -40,7 +40,7 @@ export function act(current, action, now) {
     if (!name || name.length > 120 || !Number.isFinite(action.drunkNumber) || action.drunkNumber < 0) return state;
     return { ...state, screen: 'S02', player: { name, drunkNumber: action.drunkNumber } };
   }
-  if (action.type === 'next' && state.screen === 'S02') return { ...state, screen: 'S03' };
+  if (action.type === 'next' && state.screen === 'S02') return { ...state, screen: 'S03', canViewRole: true };
   if (action.type === 'arrive' && state.screen === 'S03' && !state.arrived) {
     return { ...state, arrived: true, transitionAt: now + 600 };
   }

@@ -31,7 +31,7 @@ function infoRow(label, value, description) {
   return row;
 }
 
-export function renderScreen(state, dispatch, seconds) {
+export function renderScreen(app, state, dispatch, seconds) {
   const shell = element('section', 'game-shell');
   shell.dataset.screen = state.screen;
   shell.setAttribute('aria-label', 'Game screen');
@@ -94,7 +94,10 @@ export function renderScreen(state, dispatch, seconds) {
 
   if (state.screen === 'S02') {
     const info = state.information;
-    const list = element('div', 'game-panel info-list');
+    const list = element('div', 'game-panel info-list role-details');
+    list.tabIndex = 0;
+    list.setAttribute('role', 'region');
+    list.setAttribute('aria-label', 'Role information');
     const identity = element('dl', 'info-group');
     const teamGoal = info.team === 'Mafia'
       ? 'Keep at least one mafia member alive when the final roundtable ends.'
@@ -182,7 +185,10 @@ export function renderScreen(state, dispatch, seconds) {
   }
 
   shell.append(content);
-  return shell;
+  // A background game transition can redraw the role the player is reading.
+  const roleScroll = app.querySelector('.role-details')?.scrollTop;
+  app.replaceChildren(shell);
+  if (roleScroll && state.screen === 'S02') shell.querySelector('.role-details').scrollTop = roleScroll;
 }
 
 export function roleView(state, open) {

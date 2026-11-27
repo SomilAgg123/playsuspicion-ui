@@ -229,10 +229,19 @@ body { background: var(--background-room); color: var(--color-text); font-weight
 .role-button[aria-pressed="true"] { border-color: var(--color-accent); }
 .screen-action { margin-top: auto; }
 
-.info-list { flex: 1; display: flex; flex-direction: column; gap: var(--space-5); }
-.info-group { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: var(--space-4); min-width: 0; }
+.game-shell[data-screen="S02"] {
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  gap: var(--space-2);
+  padding-block: max(var(--space-2), env(safe-area-inset-top)) max(var(--space-2), env(safe-area-inset-bottom));
+}
+.game-shell[data-screen="S02"] .screen-content { min-height: 0; gap: var(--space-2); }
+.role-details { overflow-y: auto; min-height: 4lh; }
+.info-list { flex: 1; display: flex; flex-direction: column; gap: var(--space-3); line-height: var(--line-height-statement); }
+.info-group { flex: 1 0 auto; display: flex; flex-direction: column; justify-content: center; gap: var(--space-2); min-width: 0; }
 .info-group + .info-group:not(.instruction-block) { border-top: var(--stroke-thin) solid var(--color-border); padding-top: var(--space-5); }
-.info-description, .role-task { flex-basis: 100%; padding-top: var(--space-2); }
+.info-description, .role-task { flex-basis: 100%; padding-top: var(--space-1); }
 .info-description, .field-description { color: var(--color-label); font-weight: var(--font-weight-body); }
 .screen-statement { font: var(--font-weight-display) var(--font-size-statement) / var(--line-height-statement) var(--font-display); text-align: center; text-wrap: balance; }
 .info-row { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: var(--space-2); }
@@ -301,10 +310,18 @@ body { background: var(--background-room); color: var(--color-text); font-weight
 @keyframes waiting-spin { to { transform: rotate(360deg); } }
 @keyframes screen-enter { from { opacity: 0; transform: translateY(var(--motion-enter)); } to { opacity: 1; transform: translateY(0); } }
 
-/* CSS var() cannot be used in media queries; this is the sole length exception. */
+/* Custom properties cannot supply media-query breakpoints. */
 @media (max-width: 360px) {
   .game-shell { padding-inline: max(var(--space-4), env(safe-area-inset-left)) max(var(--space-4), env(safe-area-inset-right)); }
   .game-panel { padding: var(--space-4); }
+}
+@media (max-height: 42rem) {
+  .game-shell {
+    padding-block: max(var(--space-2), env(safe-area-inset-top)) max(var(--space-2), env(safe-area-inset-bottom));
+    row-gap: var(--space-2);
+  }
+  .game-header, .mic-details { padding-block: var(--space-2); }
+  .screen-content, .mic-details, .player-list { row-gap: var(--space-2); }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition-duration: var(--motion-reduced) !important; }

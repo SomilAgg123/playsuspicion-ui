@@ -9,7 +9,7 @@ try { unlocked = sessionStorage.getItem(sessionKey) === 'yes'; } catch {}
 let state = unlocked ? createScenario() : { screen: 'S00' };
 let showingRole = false;
 
-function render() { app.replaceChildren(renderScreen(roleView(state, showingRole), dispatch, remainingSeconds(state, performance.now()))); }
+function render() { renderScreen(app, roleView(state, showingRole), dispatch, remainingSeconds(state, performance.now())); }
 
 function dispatch(action) {
   if ((action.type === 'role' && state.canViewRole) || (action.type === 'back' && showingRole)) {

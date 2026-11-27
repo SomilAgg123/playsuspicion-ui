@@ -1,5 +1,5 @@
 import { revealPaper } from './role-reveal.js';
-import { drinkingPlans, planDescription, formatDrinkAmount, formatSipEstimate } from './drinking-plans.js';
+import { drinkingPlans, planDescription, formatDrinkServing } from './drinking-plans.js';
 import { roles, formatRoleTask } from './roles.js';
 import { missions } from './missions.js';
 import { partyTasks } from './party-tasks.js';
@@ -518,9 +518,7 @@ export function renderScreen(app, state, dispatch, seconds) {
     status.setAttribute('role', 'status');
     content.classList.add('discussion-content');
     shell.dataset.drinkId = id;
-    const sipEstimate = formatSipEstimate(amount);
-    const drinkAmount = formatDrinkAmount(amount);
-    const card = element('p', 'game-panel drink-amount', sipEstimate ? `${sipEstimate} or ${drinkAmount}` : drinkAmount);
+    const card = element('p', 'game-panel drink-amount', formatDrinkServing(amount));
     content.append(title, card,
       button(playerName ? `I saw ${playerName} drink it` : 'I drank this amount',
         () => dispatch({ type: playerName ? 'verify-drink' : 'report-drink', drinkId: id })), status);

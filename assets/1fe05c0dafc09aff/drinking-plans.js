@@ -10,12 +10,15 @@ const fractions = new Map([
 ]);
 const sipsPerDrink = 16;
 
-export function formatSipEstimate(amount) {
+export function formatDrinkServing(amount) {
   const estimate = amount * sipsPerDrink;
   if (estimate < 1) return 'Less than 1 sip';
-  if (!Number.isFinite(estimate)) return '';
+  if (!Number.isFinite(estimate)) return formatDrinkAmount(amount);
   const count = Math.round(estimate);
-  return `${count} ${count === 1 ? 'sip' : 'sips'}`;
+  const sips = `${count} ${count === 1 ? 'sip' : 'sips'}`;
+  if (count <= 3) return sips;
+  const nearestQuarter = Math.round(amount * 4) / 4;
+  return `${sips} or ${formatDrinkAmount(nearestQuarter)}`;
 }
 
 export function formatDrinkAmount(amount) {

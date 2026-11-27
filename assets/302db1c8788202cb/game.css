@@ -109,8 +109,8 @@
   --timer-width: 5rem;
   --shell-width: 40rem;
   --dialog-width: 28rem;
-  --tear-and-hold: 730ms;
-  --tear-release: 670ms;
+  --tear-travel: 850ms;
+  --tear-release: 550ms;
   --tear-fiber: 0.24rem;
   --tear-raw-paper: #fff5d9;
   --tear-shadow: 0 2px 5px #48321c66;
@@ -359,7 +359,7 @@ body { background: var(--background-room); color: var(--color-text); font-weight
 .role-button[aria-pressed="true"] { border-color: var(--color-accent); }
 .screen-action { margin-top: auto; }
 
-.paper-reveal, .paper-cover, .paper-half, .paper-edge, .paper-face {
+.paper-reveal, .paper-half, .paper-flat, .paper-base, .paper-flap, .paper-edge, .paper-face {
   position: absolute;
   inset: 0;
 }
@@ -367,42 +367,52 @@ body { background: var(--background-room); color: var(--color-text); font-weight
 #app:has(> [data-screen="role-briefing"]) ~ .paper-reveal { background: var(--background-room); }
 .paper-reveal .game-shell { position: absolute; inset-inline: 0; }
 .paper-reveal .screen-content { animation: none; }
-.paper-cover, .paper-face { background: var(--background-room); }
+.paper-base, .paper-face { background: var(--background-room); }
 .paper-edge { background: var(--tear-raw-paper); }
-.paper-half { filter: drop-shadow(var(--tear-shadow)); }
-.paper-left { --out: -1; --shade-direction: to right; transform-origin: 0 60%; }
-.paper-right { --out: 1; --shade-direction: to left; transform-origin: 100% 60%; }
+.paper-left { --out: -1; --shade-direction: to right; --bend: 51deg; }
+.paper-right { --out: 1; --shade-direction: to left; --bend: 45deg; }
+.paper-half {
+  transform-origin: 50% 100%;
+}
 .paper-face::after {
   content: '';
   position: absolute;
   inset: 0;
   background: linear-gradient(var(--shade-direction), transparent 41%, var(--tear-crease) 46%, var(--tear-highlight) 50%, transparent 54%);
 }
-@property --tear-tip {
-  syntax: '<percentage>';
-  initial-value: 0%;
-  inherits: false;
+@property --tear-progress {
+  syntax: '<number>';
+  initial-value: 0;
+  inherits: true;
 }
-.paper-cover {
-  clip-path: polygon(0 calc(var(--tear-tip) - 16%), 45% calc(var(--tear-tip) - 16%), 50% var(--tear-tip), 55% calc(var(--tear-tip) - 16%), 100% calc(var(--tear-tip) - 16%), 100% 100%, 0 100%);
-  animation: tear-down var(--tear-and-hold) linear both;
+.paper-reveal {
+  filter: drop-shadow(var(--tear-shadow));
+  --fold-rise: min(24vw, 24vh);
+  --fold-tip: calc(100% * var(--tear-progress));
+  --fold-end: calc(var(--fold-tip) - var(--fold-rise));
+  animation: tear-down var(--tear-travel) linear both;
 }
-.paper-opening .paper-half { animation: peel-away var(--tear-release) ease-in-out both; }
+.paper-flat {
+  clip-path: polygon(0 calc(var(--fold-end) - var(--stroke-thin)), 50% calc(var(--fold-tip) - var(--stroke-thin)), 100% calc(var(--fold-end) - var(--stroke-thin)), 100% 100%, 0 100%);
+}
+.paper-flap {
+  /* Rotate around the diagonal from the outer edge to the current tear tip. */
+  --axis: calc(-1 * var(--out) * atan2(var(--fold-rise), 50vw));
+  transform-origin: 50% var(--fold-tip);
+  transform: rotate(var(--axis)) rotateX(calc(var(--bend) * var(--tear-progress))) rotate(calc(-1 * var(--axis)));
+  clip-path: polygon(0 0, 100% 0, 100% var(--fold-end), 50% var(--fold-tip), 0 var(--fold-end));
+}
+.paper-opening .paper-half { animation: paper-drop var(--tear-release) cubic-bezier(.37,.19,.67,.45) both; }
 @keyframes tear-down {
-  from { --tear-tip: 0%; }
-  10% { --tear-tip: 6%; }
-  34% { --tear-tip: 40%; }
-  42% { --tear-tip: 45%; }
-  74%, to { --tear-tip: 116%; }
+  from { --tear-progress: 0; }
+  14% { --tear-progress: .10; }
+  48% { --tear-progress: .49; }
+  65% { --tear-progress: .63; }
+  to { --tear-progress: 1; }
 }
-@keyframes peel-away {
+@keyframes paper-drop {
   from { transform: none; }
-  45% {
-    transform: perspective(110vmax) translateX(calc(var(--out) * 12%)) rotateY(calc(var(--out) * 18deg)) rotate(calc(var(--out) * 2deg));
-  }
-  to {
-    transform: perspective(110vmax) translateX(calc(var(--out) * 65%)) rotateY(calc(var(--out) * 42deg)) rotate(calc(var(--out) * 6deg));
-  }
+  to { transform: translate(calc(var(--out) * 26vw), 115vh) rotate(calc(var(--out) * 16deg)); }
 }
 
 .game-shell[data-screen="S02"] {

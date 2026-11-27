@@ -6,12 +6,13 @@ function makeHalf(snapshot, side) {
   const outer = left ? '0%' : '100%';
   const rim = [];
   const face = [];
+  const joined = [];
   for (let i = 0; i <= 100; i++) {
     const bend = 0.95 * Math.sin(i * 0.14) + 0.46 * Math.sin(i * 0.51);
     const grain = 0.22 * Math.sin(i * 2.39);
-    const opening = 0.35 + 1.85 * (1 - i / 100);
-    const edge = 50 + bend + grain + direction * opening;
+    const edge = 50 + bend + grain;
     rim.push(edge.toFixed(3) + '% ' + i + '%');
+    joined.push(`calc(${edge.toFixed(3)}% - var(--stroke-thin) * ${direction}) ${i}%`);
     const fiber = 0.45 + 0.55 * Math.abs(Math.sin(i * 1.73 + direction));
     face.push(`calc(${edge.toFixed(3)}% + var(--tear-fiber) * ${direction * fiber}) ${i}%`);
   }
@@ -26,7 +27,20 @@ function makeHalf(snapshot, side) {
   printed.style.clipPath = polygon(face);
   printed.append(snapshot.cloneNode(true));
   edge.append(printed);
-  half.append(edge);
+  const flap = document.createElement('div');
+  flap.className = 'paper-flap';
+  flap.append(edge);
+
+  // The paper on either side of the moving fold meets on the same hinge.
+  // The flat portion keeps its printed text in place until the seam reaches it.
+  const flat = document.createElement('div');
+  flat.className = 'paper-flat';
+  const base = document.createElement('div');
+  base.className = 'paper-base';
+  base.style.clipPath = polygon(joined);
+  base.append(snapshot.cloneNode(true));
+  flat.append(base);
+  half.append(flat, flap);
   return half;
 }
 
@@ -48,17 +62,13 @@ export async function revealRole(app, dispatch) {
   overlay.className = 'paper-reveal';
   overlay.setAttribute('aria-hidden', 'true');
   overlay.inert = true;
-  const cover = document.createElement('div');
-  cover.className = 'paper-cover';
-  cover.append(snapshot);
   const left = makeHalf(snapshot, 'left');
-  overlay.append(left, makeHalf(snapshot, 'right'), cover);
+  overlay.append(left, makeHalf(snapshot, 'right'));
   document.body.append(overlay);
   app.inert = true;
   try {
-    await Promise.all([finishAnimation(cover), reveal()]);
+    await Promise.all([finishAnimation(overlay), reveal()]);
     if (app.firstElementChild?.dataset.screen !== 'S02' || reducedMotion.matches) return;
-    cover.remove();
     overlay.classList.add('paper-opening');
     await finishAnimation(left);
   } finally {

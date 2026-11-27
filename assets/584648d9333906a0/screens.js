@@ -110,7 +110,7 @@ export function renderScreen(state, dispatch, seconds) {
     const spy = element('dl', 'info-group');
     spy.append(infoRow('You spy on', info.spiesOn, 'Guess this person’s secret mission to eliminate them. You have two guesses for the whole night.'));
     list.append(identity, mission, observation, spy);
-    const next = button('Next', () => dispatch({ type: 'next' }));
+    const next = button(state.viewingRole ? 'Back' : 'Next', () => dispatch({ type: state.viewingRole ? 'back' : 'next' }));
     next.classList.add('screen-action');
     if (state.viewingRole) next.dataset.navigation = 'return';
     content.append(list, next);
@@ -121,7 +121,7 @@ export function renderScreen(state, dispatch, seconds) {
     const arrived = button("I've arrived", () => dispatch({ type: 'arrive' }));
     arrived.disabled = state.arrived;
     arrived.setAttribute('aria-pressed', String(state.arrived));
-    content.append(element('p', 'arrival-description', 'Press this button once you’ve arrived at the rendezvous point.'), arrived);
+    content.append(element('p', 'arrival-description screen-statement', 'Press this button once you’ve arrived at the rendezvous point.'), arrived);
   }
 
   if (state.screen === 'S04') {

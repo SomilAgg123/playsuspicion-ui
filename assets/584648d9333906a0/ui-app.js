@@ -11,18 +11,12 @@ let showingRole = false;
 function render() { app.replaceChildren(renderScreen(roleView(state, showingRole), dispatch, remainingSeconds(state, performance.now()))); }
 
 function dispatch(action) {
-  if (action.type === 'role' && state.canViewRole) {
-    showingRole = true;
+  if ((action.type === 'role' && state.canViewRole) || (action.type === 'back' && showingRole)) {
+    state = tick(state, performance.now());
+    showingRole = action.type === 'role' ? !showingRole : false;
     render();
     window.scrollTo(0, 0);
-    app.querySelector('.brand').focus();
-    return;
-  }
-  if (action.type === 'next' && showingRole) {
-    state = tick(state, performance.now());
-    showingRole = false;
-    render();
-    app.querySelector('[data-navigation="role"]').focus();
+    app.querySelector(showingRole ? '.brand' : '[data-navigation="role"]').focus();
     return;
   }
   if (state.screen === 'S00') {

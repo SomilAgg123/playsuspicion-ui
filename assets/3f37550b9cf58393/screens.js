@@ -1,3 +1,4 @@
+import { drinkingPlans } from './drinking-plans.js';
 import { roles, formatRoleTask } from './roles.js';
 
 function element(tag, className, text) {
@@ -22,6 +23,50 @@ function field(label, name, type, value) {
   if (name === 'name') Object.assign(input, { autocomplete: 'given-name', maxLength: 120 });
   wrapper.append(input);
   return { wrapper, input };
+}
+
+function drinkingPlanField(numberInput, initialPlan, update) {
+  const question = 'How much are you drinking tonight?';
+  const wrapper = element('div', 'game-field');
+  const label = element('label', '', question);
+  label.htmlFor = 'drinking-plan';
+  const dialog = element('dialog', 'game-dialog');
+  dialog.id = 'drinking-plan-dialog';
+  dialog.setAttribute('closedby', 'any');
+  const title = element('h2', 'section-title', question);
+  title.id = 'drinking-plan-title';
+  dialog.setAttribute('aria-labelledby', title.id);
+  const actions = element('div', 'dialog-actions drinking-options');
+  const current = drinkingPlans.find(plan => plan.id === initialPlan);
+  const opener = button(current?.label ?? 'Choose an option', () => {
+    const number = numberInput.validity.valid ? numberInput.valueAsNumber : null;
+    actions.replaceChildren();
+    for (const plan of drinkingPlans) {
+      const option = button(plan.label, () => {
+        opener.value = plan.id;
+        opener.textContent = plan.label;
+        update();
+        dialog.close();
+      }, { variant: 'secondary' });
+      option.setAttribute('aria-pressed', String(opener.value === plan.id));
+      option.autofocus = opener.value === plan.id;
+      option.append(element('span', 'field-description', plan.amount(number)));
+      actions.append(option);
+    }
+    dialog.showModal();
+  }, { variant: 'secondary' });
+  opener.id = label.htmlFor;
+  opener.value = current?.id ?? '';
+  opener.classList.add('plan-picker');
+  opener.setAttribute('aria-haspopup', 'dialog');
+  opener.setAttribute('aria-controls', dialog.id);
+  label.id = 'drinking-plan-label';
+  opener.setAttribute('aria-labelledby', label.id + ' ' + opener.id);
+
+  dialog.append(title, actions);
+  dialog.addEventListener('close', () => opener.focus());
+  wrapper.append(label, opener);
+  return { wrapper, opener, dialog };
 }
 
 function assignmentCard(label, value, ...lines) {
@@ -150,19 +195,20 @@ export function renderScreen(app, state, dispatch, seconds) {
     hint.id = 'drunk-number-description';
     number.input.setAttribute('aria-describedby', hint.id);
     number.wrapper.append(hint);
+    const plan = drinkingPlanField(number.input, state.player.drinkingPlan, update);
+    shell.append(plan.dialog);
     const next = button('Next', null, { submit: true });
     next.classList.add('screen-action');
-    const update = () => {
-      const value = number.input.value;
-      next.disabled = !state.canJoin || !name.input.value.trim() || value === '' || !Number.isFinite(Number(value)) || Number(value) < 0;
-    };
+    function update() {
+      next.disabled = !state.canJoin || !plan.opener.value || !name.input.value.trim() || !number.input.validity.valid;
+    }
     content.addEventListener('input', update);
     content.addEventListener('submit', event => {
       event.preventDefault();
-      if (!next.disabled) dispatch({ type: 'join', name: name.input.value.trim(), drunkNumber: Number(number.input.value) });
+      if (!next.disabled) dispatch({ type: 'join', name: name.input.value.trim(), drunkNumber: Number(number.input.value), drinkingPlan: plan.opener.value });
     });
     const fields = element('div', 'form-fields');
-    fields.append(name.wrapper, number.wrapper);
+    fields.append(name.wrapper, number.wrapper, plan.wrapper);
     content.append(fields, next);
     update();
   }

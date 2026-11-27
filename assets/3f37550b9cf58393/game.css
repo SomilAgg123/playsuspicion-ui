@@ -500,6 +500,20 @@ body { background: var(--background-room); color: var(--color-text); font-weight
 .dialog-actions { display: flex; flex-wrap: wrap; gap: var(--space-3); margin-top: var(--space-6); }
 .dialog-actions .game-button { flex: 1 1 var(--timer-width); }
 
+.plan-picker { justify-content: space-between; text-align: start; }
+.plan-picker::after {
+  content: '';
+  width: var(--space-2);
+  height: var(--space-2);
+  border-right: var(--stroke-strong) solid currentColor;
+  border-bottom: var(--stroke-strong) solid currentColor;
+  transform: rotate(45deg);
+}
+.drinking-options { display: grid; }
+.drinking-options .game-button { flex-direction: column; gap: var(--space-1); }
+.drinking-options .game-button[aria-pressed="true"] { border: var(--stroke-strong) solid var(--color-accent); }
+.drinking-options .field-description { font-family: var(--font-body); }
+
 .mic-content { text-align: center; }
 .mic-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); min-height: var(--control-height); }
 .mic-actions .game-button--secondary { grid-column: 2; }

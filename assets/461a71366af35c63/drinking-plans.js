@@ -52,7 +52,7 @@ export function eventDrinkAmount(player, rosterSize, expectedTriggers = defaultT
   if (!player.joined || !(player.drunkNumber > 0 && multiplier > 0)) return 0;
   const taskLosers = Object.keys(partyTasks).reduce((sum, key) => sum + taskBallotSize(key, rosterSize), 0);
   const expectedPrompts = expectedTriggers / 2 + taskLosers / rosterSize;
-  return player.drunkNumber * multiplier / expectedPrompts;
+  return Math.max(1 / sipsPerDrink, player.drunkNumber * multiplier / expectedPrompts);
 }
 
 export function drawEventDrinks(players, randomInt, expectedTriggers) {

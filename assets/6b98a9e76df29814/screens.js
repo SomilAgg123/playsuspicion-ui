@@ -133,8 +133,11 @@ function taskScreen(content, state, dispatch) {
   const status = element('p');
   status.setAttribute('role', 'status');
   content.classList.add('discussion-content');
-  const heading = stage === 'acknowledge' ? 'You were last.' : task.prompt;
-  content.append(element('h2', 'screen-statement', heading));
+  const title = element('h2', 'section-title task-title', 'New Task');
+  const prompt = element('p', 'screen-statement', stage === 'acknowledge' ? 'You were last.' : task.prompt);
+  prompt.id = 'task-prompt';
+  title.setAttribute('aria-describedby', prompt.id);
+  content.append(title, prompt);
   if (stage === 'vote') {
     if (round > 1) content.append(element('p', '', 'No majority. Vote again.'));
     const choice = taskPlayerField(content, key, players);
@@ -505,7 +508,7 @@ export function renderScreen(app, state, dispatch, seconds) {
 
   if (state.screen === 'drink') {
     const { id, amount, playerName } = state.drink;
-    const title = element('h2', 'screen-statement', 'Drink');
+    const title = element('h2', 'screen-statement', playerName ? `Did ${playerName} drink?` : 'Did you drink?');
     title.tabIndex = -1;
     const status = element('p');
     status.setAttribute('role', 'status');
@@ -513,8 +516,7 @@ export function renderScreen(app, state, dispatch, seconds) {
     shell.dataset.drinkId = id;
     const sipEstimate = formatSipEstimate(amount);
     const drinkAmount = formatDrinkAmount(amount);
-    const card = assignmentCard(playerName ?? 'Your amount', sipEstimate || drinkAmount);
-    if (sipEstimate) card.querySelector('.assignment-heading').append(element('span', 'drink-equivalent', `or ${drinkAmount}`));
+    const card = element('p', 'game-panel drink-amount', sipEstimate ? `${sipEstimate} (${drinkAmount})` : drinkAmount);
     content.append(title, card,
       button(playerName ? `I saw ${playerName} drink it` : 'I drank this amount',
         () => dispatch({ type: playerName ? 'verify-drink' : 'report-drink', drinkId: id })), status);

@@ -517,7 +517,8 @@ body { background: var(--background-room); color: var(--color-text); font-weight
 }
 .assignment-card summary::-webkit-details-marker { display: none; }
 .assignment-label { color: var(--color-label); overflow-wrap: anywhere; }
-.drink-equivalent { grid-column: 1 / -1; overflow-wrap: anywhere; }
+.task-title { text-align: center; color: var(--color-accent); }
+.game-panel.drink-amount { padding: var(--space-3) var(--space-2); text-align: center; }
 .assignment-value {
   grid-column: 1;
   overflow-wrap: anywhere;

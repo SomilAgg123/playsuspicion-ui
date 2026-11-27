@@ -65,6 +65,8 @@
   --poster-folds: url('assets/paper-folds.webp');
   --poster-fold-inset: -80% -14%;
   --poster-fold-peak: 0.9;
+  --poster-fold-rest: 0.52;
+  --poster-to-fold-rest: 0.34;
   --poster-to-fold-inset: -95% -10%;
   --poster-to-fold-peak: 0.62;
   --poster-impact: 420ms;
@@ -190,7 +192,7 @@ body { background: var(--background-room); color: var(--color-text); font-weight
   z-index: -1;
   pointer-events: none;
   background: var(--poster-folds) center / 100% 100% no-repeat;
-  opacity: 0;
+  opacity: var(--poster-fold-rest);
   animation: paper-buckle var(--poster-fold-duration) var(--ease-standard)
     calc(var(--stamp-delay) + var(--poster-impact) * 0.65) both;
 }
@@ -198,12 +200,13 @@ body { background: var(--background-room); color: var(--color-text); font-weight
   from { opacity: 0; transform: scale(0.77); }
   20% { opacity: var(--poster-fold-peak); }
   55% { transform: scale(1); }
-  to { opacity: 0; transform: scale(1.04); }
+  to { opacity: var(--poster-fold-rest); transform: scale(1); }
 }
 .poster-to {
   --stamp-delay: var(--poster-beat);
   --poster-fold-inset: var(--poster-to-fold-inset);
   --poster-fold-peak: var(--poster-to-fold-peak);
+  --poster-fold-rest: var(--poster-to-fold-rest);
 }
 .poster-to::before { scale: -1 1; }
 .poster-to .poster-ink {

@@ -9,6 +9,11 @@ const discussionPages = {
   spy: 'I spy a secret mission',
 };
 
+function canOpenDiscussionPage(state, page) {
+  return state.screen === 'S07' && state.discussion && Object.hasOwn(discussionPages, page)
+    && (page !== 'death-report' || state.information.team === 'Community');
+}
+
 function element(tag, className, text) {
   const node = document.createElement(tag);
   if (className) node.className = className;
@@ -238,17 +243,30 @@ export function renderScreen(app, state, dispatch, seconds) {
     shell.append(dialog);
     const enter = button('Enter', null, { submit: true });
     enter.classList.add('screen-action');
-    enter.disabled = true;
+    enter.disabled = !state.unlocked;
     password.input.addEventListener('input', () => {
       password.input.removeAttribute('aria-invalid');
       enter.disabled = password.input.value.length === 0;
     });
     content.addEventListener('submit', event => {
       event.preventDefault();
-      if (!enter.disabled) dispatch({ type: 'unlock', password: password.input.value });
+      if (!enter.disabled) dispatch({ type: 'unlock', password: password.input.value, team: content.elements.team.value });
     });
     const fields = element('div', 'form-fields');
-    fields.append(password.wrapper);
+    if (!state.unlocked) fields.append(password.wrapper);
+    const team = element('fieldset', 'buddy-list');
+    team.append(element('legend', '', 'Enter as'));
+    const options = element('div', 'player-list');
+    for (const label of ['Mafia', 'Community']) {
+      const choice = element('label', 'buddy-choice');
+      const input = element('input');
+      const value = label.toLowerCase();
+      Object.assign(input, { type: 'radio', name: 'team', value, checked: value === state.sampleTeam });
+      choice.append(input, label);
+      options.append(choice);
+    }
+    team.append(options);
+    fields.append(team);
     content.append(fields, enter);
   }
 
@@ -374,9 +392,7 @@ export function renderScreen(app, state, dispatch, seconds) {
     heading.tabIndex = -1;
     brief.append(heading,
       element('p', '', 'Tonight, you’ll observe another player. They’ll ask you to confirm when they’ve completed their secret mission. You have an observer of your own.'),
-      element('p', '', state.information.team === 'Community'
-        ? 'You’re also spying on someone. Watch what they do. You can guess their secret mission during discussion or at the final roundtable. You have two guesses for the whole night. A correct guess kills your target.'
-        : 'You’re also spying on someone. Watch what they do. At the final roundtable, you’ll choose from a list and guess their secret mission. If you guess correctly, your target is killed before they can take a seat.'));
+      element('p', '', 'You’re also spying on someone. Watch what they do. You can guess their secret mission during discussion or at the final roundtable. You have two guesses for the whole night. A correct guess kills your target.'));
     const reveal = button('Reveal my missions', () => revealPaper(app, () => dispatch({ type: 'reveal-missions' }), 'S06'));
     reveal.classList.add('screen-action');
     content.append(brief, reveal);
@@ -402,12 +418,11 @@ export function renderScreen(app, state, dispatch, seconds) {
     content.classList.add('discussion-content');
     content.append(element('h2', 'screen-statement', 'Discuss your suspicions'));
     if (state.dead) content.append(element('p', '', "You've been killed."));
-    if (state.discussion) {
-      for (const [page, label] of Object.entries(discussionPages)) {
-        const action = button(label, () => dispatch({ type: page }), { variant: 'secondary' });
-        action.dataset.navigation = page;
-        content.append(action);
-      }
+    for (const [page, label] of Object.entries(discussionPages)) {
+      if (!canOpenDiscussionPage(state, page)) continue;
+      const action = button(label, () => dispatch({ type: page }), { variant: 'secondary' });
+      action.dataset.navigation = page;
+      content.append(action);
     }
   }
   if (Object.hasOwn(discussionPages, state.screen)) discussionForm(content, state, dispatch);
@@ -442,7 +457,7 @@ export function createNavigation() {
     view(state) {
       if (page === 'role' && state.canViewRole) return { ...state, screen: 'S02', page };
       if (page === 'missions' && state.missions && state.screen !== 'S06') return { ...state, screen: 'S06', page };
-      if (state.screen === 'S07' && state.discussion && Object.hasOwn(discussionPages, page)) return { ...state, screen: page, page };
+      if (canOpenDiscussionPage(state, page)) return { ...state, screen: page, page };
       page = null;
       return state;
     },
@@ -451,7 +466,7 @@ export function createNavigation() {
       if (action === 'back' && page) page = null;
       else if (action === 'role' && state.canViewRole) page = page === action ? null : action;
       else if (action === 'missions' && state.missions) page = page === action || state.screen === 'S06' ? null : action;
-      else if (state.screen === 'S07' && state.discussion && Object.hasOwn(discussionPages, action)) page = action;
+      else if (canOpenDiscussionPage(state, action)) page = action;
       else return;
       return page ? '.brand' : `[data-navigation="${action === 'back' ? previous : action}"]`;
     },

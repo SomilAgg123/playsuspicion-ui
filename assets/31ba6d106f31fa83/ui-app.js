@@ -5,10 +5,14 @@ applyTheme();
 const app = document.getElementById('app');
 const intro = createIntro();
 const sessionKey = 'suspicion-ui-unlocked';
-const sampleTeam = new URLSearchParams(location.search).get('team');
-let unlocked = false;
-try { unlocked = sessionStorage.getItem(sessionKey) === 'yes'; } catch {}
-let state = unlocked ? createScenario(sampleTeam) : { screen: 'S00' };
+let savedEntry;
+try { savedEntry = sessionStorage.getItem(sessionKey); } catch {}
+const requestedTeam = new URLSearchParams(location.search).get('team');
+const initialTeam = requestedTeam ?? savedEntry;
+let state = {
+  screen: 'S00', sampleTeam: initialTeam === 'community' ? 'community' : 'mafia',
+  unlocked: ['yes', 'mafia', 'community'].includes(savedEntry),
+};
 const navigation = createNavigation();
 
 function render() { renderScreen(app, intro.view(navigation.view(state)), dispatch, remainingSeconds(state, performance.now())); }
@@ -28,14 +32,14 @@ function dispatch(action) {
   }
   if (state.screen === 'S00') {
     if (action.type !== 'unlock') return;
-    if (!acceptsPassword(action.password)) {
-      const input = app.querySelector('input');
+    if (!state.unlocked && !acceptsPassword(action.password)) {
+      const input = app.querySelector('input[name="password"]');
       input.setAttribute('aria-invalid', 'true');
       app.querySelector('.game-dialog').showModal();
       return;
     }
-    try { sessionStorage.setItem(sessionKey, 'yes'); } catch {}
-    state = createScenario(sampleTeam);
+    try { sessionStorage.setItem(sessionKey, action.team); } catch {}
+    state = createScenario(action.team);
   } else {
     state = act(state, action, performance.now());
   }

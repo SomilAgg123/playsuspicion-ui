@@ -60,15 +60,13 @@ export function act(current, action, now) {
     return { ...state, screen: 'S06', missions: { observer: 'Maya', observes: 'Jordan', spiesOn: 'Bea' } };
   }
   if (action.type === 'finish-missions' && state.screen === 'S06') {
-    const next = { ...state, screen: 'S07' };
-    if (state.information.team === 'Community') {
-      next.discussion = { observedMission: 'Give Sam a hug', observationConfirmed: false, guesses: [], spyCorrect: false };
-    }
-    return next;
+    return { ...state, screen: 'S07', discussion: {
+      observedMission: 'Give Sam a hug', observationConfirmed: false, guesses: [], spyCorrect: false,
+    } };
   }
   if (state.screen === 'S07' && state.discussion) {
     const details = state.discussion;
-    if (action.type === 'report-death') return { ...state, dead: true };
+    if (action.type === 'report-death' && state.information.team === 'Community') return { ...state, dead: true };
     if (action.type === 'confirm-observation') return { ...state, discussion: { ...details, observationConfirmed: true } };
     if (action.type === 'guess-mission' && !state.dead && !details.spyCorrect && details.guesses.length < 2 &&
         action.attempt === details.guesses.length + 1 && !details.guesses.includes(action.missionIndex) &&

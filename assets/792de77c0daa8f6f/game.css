@@ -109,13 +109,13 @@
   --timer-width: 5rem;
   --shell-width: 40rem;
   --dialog-width: 28rem;
-  --glass-crack: 220ms;
-  --glass-hold: 650ms;
-  --glass-fall: 750ms;
-  --glass-impact-size: 1.5rem;
-  --glass-ink: #382f288a;
-  --glass-glint: #fffdf3;
-  --glass-ease-fall: cubic-bezier(.36,.08,.71,.55);
+  --tear-and-hold: 730ms;
+  --tear-release: 670ms;
+  --tear-fiber: 0.24rem;
+  --tear-raw-paper: #fff5d9;
+  --tear-shadow: 0 2px 5px #48321c66;
+  --tear-crease: #6d462724;
+  --tear-highlight: #fff8e552;
   --motion-fast: 140ms;
   --motion-screen: 240ms;
   --motion-wait: 1200ms;
@@ -359,51 +359,50 @@ body { background: var(--background-room); color: var(--color-text); font-weight
 .role-button[aria-pressed="true"] { border-color: var(--color-accent); }
 .screen-action { margin-top: auto; }
 
-.glass-reveal, .glass-pane, .glass-shard, .glass-reveal svg {
+.paper-reveal, .paper-cover, .paper-half, .paper-edge, .paper-face {
   position: absolute;
   inset: 0;
-  overflow: hidden;
 }
-.glass-reveal { position: fixed; z-index: 2; pointer-events: none; }
-.glass-pane, .glass-shard { background: var(--background-room); }
-.glass-reveal .game-shell { position: absolute; inset-inline: 0; }
-.glass-reveal .screen-content { animation: none; }
-.glass-reveal svg {
-  width: 100%;
-  height: 100%;
-  fill: none;
-  stroke: var(--glass-ink);
-  stroke-width: var(--stroke-thin);
-  filter: drop-shadow(0 var(--stroke-thin) 0 var(--glass-glint));
-}
-.glass-reveal polyline { vector-effect: non-scaling-stroke; }
-.glass-pane svg {
-  animation: glass-crack var(--glass-crack) ease-out both;
-}
-.glass-impact {
+.paper-reveal { position: fixed; z-index: 2; overflow: hidden; pointer-events: none; }
+#app:has(> [data-screen="role-briefing"]) ~ .paper-reveal { background: var(--background-room); }
+.paper-reveal .game-shell { position: absolute; inset-inline: 0; }
+.paper-reveal .screen-content { animation: none; }
+.paper-cover, .paper-face { background: var(--background-room); }
+.paper-edge { background: var(--tear-raw-paper); }
+.paper-half { filter: drop-shadow(var(--tear-shadow)); }
+.paper-left { --out: -1; --shade-direction: to right; transform-origin: 0 60%; }
+.paper-right { --out: 1; --shade-direction: to left; transform-origin: 100% 60%; }
+.paper-face::after {
+  content: '';
   position: absolute;
-  left: var(--impact-x);
-  top: var(--impact-y);
-  width: var(--glass-impact-size);
-  aspect-ratio: 1;
-  background: radial-gradient(circle, var(--color-text) 12%, var(--glass-glint) 30%, var(--glass-ink) 55%, transparent 74%);
-  clip-path: polygon(50% 0, 62% 32%, 89% 15%, 75% 45%, 100% 55%, 68% 64%, 73% 99%, 47% 75%, 22% 95%, 31% 64%, 0 51%, 32% 38%, 21% 8%, 46% 29%);
-  transform: translate(-50%, -50%);
+  inset: 0;
+  background: linear-gradient(var(--shade-direction), transparent 41%, var(--tear-crease) 46%, var(--tear-highlight) 50%, transparent 54%);
 }
-.glass-pane .glass-impact { animation: glass-hit var(--glass-hold) ease-out both; }
-.glass-shard { animation: glass-fall var(--glass-fall) var(--glass-ease-fall) both; }
-@keyframes glass-crack {
-  from { clip-path: circle(0 at var(--impact-x) var(--impact-y)); }
-  to { clip-path: circle(150vmax at var(--impact-x) var(--impact-y)); }
+@property --tear-tip {
+  syntax: '<percentage>';
+  initial-value: 0%;
+  inherits: false;
 }
-@keyframes glass-hit {
-  from { scale: 1.35; }
-  15%, to { scale: 1; }
+.paper-cover {
+  clip-path: polygon(0 calc(var(--tear-tip) - 16%), 45% calc(var(--tear-tip) - 16%), 50% var(--tear-tip), 55% calc(var(--tear-tip) - 16%), 100% calc(var(--tear-tip) - 16%), 100% 100%, 0 100%);
+  animation: tear-down var(--tear-and-hold) linear both;
 }
-@keyframes glass-fall {
+.paper-opening .paper-half { animation: peel-away var(--tear-release) ease-in-out both; }
+@keyframes tear-down {
+  from { --tear-tip: 0%; }
+  10% { --tear-tip: 6%; }
+  34% { --tear-tip: 40%; }
+  42% { --tear-tip: 45%; }
+  74%, to { --tear-tip: 116%; }
+}
+@keyframes peel-away {
   from { transform: none; }
-  45% { opacity: 1; }
-  to { transform: translate(var(--drift), var(--drop)) rotate(var(--spin)); opacity: 0; }
+  45% {
+    transform: perspective(110vmax) translateX(calc(var(--out) * 12%)) rotateY(calc(var(--out) * 18deg)) rotate(calc(var(--out) * 2deg));
+  }
+  to {
+    transform: perspective(110vmax) translateX(calc(var(--out) * 65%)) rotateY(calc(var(--out) * 42deg)) rotate(calc(var(--out) * 6deg));
+  }
 }
 
 .game-shell[data-screen="S02"] {

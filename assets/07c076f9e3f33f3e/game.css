@@ -294,18 +294,24 @@ body { background: var(--background-room); color: var(--color-text); font-weight
 .assignment-instructions { overflow-wrap: anywhere; }
 .assignment-instructions p + p { margin-top: var(--space-2); }
 .mission-card {
-  display: grid;
-  gap: var(--space-2);
-  padding: var(--space-4) var(--space-5);
   background: var(--color-surface-inset);
-  border: var(--stroke-thin) solid var(--color-border);
-  border-inline-start: var(--space-1) solid var(--color-accent);
-  border-radius: var(--radius-panel);
-  overflow-wrap: anywhere;
+  border-inline-start: var(--space-1) solid var(--color-danger-hover);
 }
-.mission-card .assignment-label { font: inherit; color: var(--color-accent); }
-.mission-text { font: var(--font-weight-display) var(--font-size-title) / var(--line-height-statement) var(--font-display); }
-.mission-instructions { color: var(--color-label); }
+.mission-card .assignment-heading {
+  display: flex;
+  justify-content: space-between;
+  min-height: var(--control-height);
+  color: var(--color-danger-hover);
+}
+.mission-card .assignment-label {
+  color: inherit;
+  overflow-wrap: anywhere;
+  font: var(--font-weight-display) var(--font-size-statement) / var(--line-height-statement) var(--font-display);
+}
+.mission-card summary::after { flex-shrink: 0; }
+.mission-card .assignment-instructions p:first-child {
+  font: var(--font-weight-display) var(--font-size-title) / var(--line-height-statement) var(--font-display);
+}
 .buddy-list { border: 0; padding: var(--space-0); margin: var(--space-0); min-width: 0; }
 .buddy-list legend { padding: var(--space-0) var(--space-0) var(--space-4); color: var(--color-label); font-weight: var(--font-weight-strong); letter-spacing: var(--tracking-label); }
 .player-list { display: flex; flex-direction: column; gap: var(--space-3); }
@@ -369,8 +375,7 @@ body { background: var(--background-room); color: var(--color-text); font-weight
     padding-block: max(var(--space-2), env(safe-area-inset-top)) max(var(--space-2), env(safe-area-inset-bottom));
     row-gap: var(--space-2);
   }
-  .assignment-heading, .mission-card { padding-block: var(--space-2); }
-  .mission-card { gap: var(--space-1); }
+  .assignment-heading { padding-block: var(--space-2); }
   .role-details { gap: var(--space-2); }
   .role-details .assignment-heading {
     grid-template-columns: auto minmax(0, 1fr) auto;

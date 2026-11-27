@@ -28,7 +28,8 @@ function assignmentCard(label, value, ...lines) {
   const instructions = lines.filter(Boolean);
   const card = element(instructions.length ? 'details' : 'div', 'assignment-card');
   const heading = element(instructions.length ? 'summary' : 'div', 'assignment-heading');
-  heading.append(element('span', 'assignment-label', label), element('strong', 'assignment-value', value));
+  heading.append(element('span', 'assignment-label', label));
+  if (value != null) heading.append(element('strong', 'assignment-value', value));
   card.append(heading);
   if (instructions.length) {
     card.name = 'assignments';
@@ -41,9 +42,8 @@ function assignmentCard(label, value, ...lines) {
 }
 
 function missionCard(mission) {
-  const card = element('section', 'mission-card');
-  card.append(element('h2', 'assignment-label', 'Secret mission'), element('p', 'mission-text', mission),
-    element('p', 'mission-instructions', 'Complete this before the final roundtable to stay alive.'));
+  const card = assignmentCard('Secret Mission', null, mission, 'Complete this before the final roundtable to stay alive.');
+  card.classList.add('mission-card');
   return card;
 }
 

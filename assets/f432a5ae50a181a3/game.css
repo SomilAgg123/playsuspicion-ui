@@ -52,6 +52,19 @@
   --tracking-label: 0.015em;
   --tracking-numeric: 0.06em;
 
+  --poster-welcome-size: min(10cqi, 3.5rem);
+  --poster-name-size: min(15.6cqi, 5.75rem);
+  --poster-to-size: var(--font-size-game);
+  --poster-leading: 1;
+  --poster-tracking: -0.045em;
+  --poster-rule-width: 2.5rem;
+  --poster-button-width: 12rem;
+  --poster-beat: 290ms;
+  --poster-impact: 250ms;
+  --poster-start-scale: 1.55;
+  --poster-name-scale: 1.85;
+  --poster-recoil: 0.97;
+
   --space-0: 0;
   --space-1: 0.25rem;
   --space-2: 0.5rem;
@@ -137,6 +150,55 @@ body { background: var(--background-room); color: var(--color-text); font-weight
   gap: var(--space-6);
   min-width: 0;
   animation: screen-enter var(--motion-screen) var(--ease-standard);
+}
+.game-shell[data-screen="welcome"] { overflow-x: clip; }
+.screen-content.welcome-poster {
+  container-type: inline-size;
+  justify-content: center;
+  align-items: center;
+  gap: var(--space-10);
+  animation: none;
+}
+.poster-title {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-3);
+  font: var(--font-weight-display) var(--poster-welcome-size)/var(--poster-leading) var(--font-display);
+  letter-spacing: var(--poster-tracking);
+  text-transform: uppercase;
+}
+.poster-word { animation: poster-stamp var(--poster-impact) var(--ease-standard) backwards; }
+.poster-to {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--poster-to-size);
+  letter-spacing: var(--tracking-numeric);
+  color: var(--color-label);
+  animation-delay: var(--poster-beat);
+}
+.poster-to::before, .poster-to::after {
+  content: '';
+  width: var(--poster-rule-width);
+  border-top: var(--stroke-thin) solid currentColor;
+}
+.poster-suspicion {
+  --poster-start-scale: var(--poster-name-scale);
+  font-size: var(--poster-name-size);
+  animation-delay: calc(2 * var(--poster-beat));
+}
+.poster-play {
+  max-width: var(--poster-button-width);
+  animation: reveal-play var(--motion-fast) var(--ease-standard) calc(3 * var(--poster-beat)) backwards;
+}
+@keyframes poster-stamp {
+  from { opacity: 0; transform: scale(var(--poster-start-scale)); }
+  65% { opacity: 1; transform: scale(var(--poster-recoil)); }
+  to { transform: scale(1); }
+}
+@keyframes reveal-play {
+  from { opacity: 0; visibility: hidden; }
+  to { opacity: 1; visibility: visible; }
 }
 .game-panel {
   padding: var(--space-5);

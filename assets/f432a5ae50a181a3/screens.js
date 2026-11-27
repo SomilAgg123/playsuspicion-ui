@@ -47,6 +47,22 @@ function missionCard(mission) {
   return card;
 }
 
+// The intro belongs to the joining browser. The server still controls the player's game screen.
+export function createIntro() {
+  let screen = 'welcome';
+  return {
+    view(state) {
+      return state.screen === 'S01' && screen ? { screen } : state;
+    },
+    advance(action) {
+      if (action === 'play' && screen === 'welcome') screen = 'game-info';
+      else if (action === 'continue' && screen === 'game-info') screen = null;
+      else return false;
+      return true;
+    },
+  };
+}
+
 export function renderScreen(app, state, dispatch, seconds) {
   const shell = element('section', 'game-shell');
   shell.dataset.screen = state.screen;
@@ -62,8 +78,30 @@ export function renderScreen(app, state, dispatch, seconds) {
     role.setAttribute('aria-pressed', String(Boolean(state.viewingRole)));
     header.append(role);
   }
-  shell.append(header);
+  if (state.screen !== 'welcome') shell.append(header);
   const content = element(['S00', 'S01'].includes(state.screen) ? 'form' : 'div', 'screen-content');
+
+  if (state.screen === 'welcome') {
+    content.classList.add('welcome-poster');
+    const title = element('h1', 'poster-title');
+    title.setAttribute('aria-label', 'Welcome to Suspicion');
+    for (const word of ['Welcome', 'to', 'Suspicion']) {
+      const stamp = element('span', `poster-word poster-${word.toLowerCase()}`, word);
+      stamp.setAttribute('aria-hidden', 'true');
+      title.append(stamp);
+    }
+    const play = button('Play', () => dispatch({ type: 'play' }));
+    play.classList.add('poster-play');
+    content.append(title, play);
+  }
+
+  if (state.screen === 'game-info') {
+    const heading = element('h2', 'screen-statement', 'Game info');
+    heading.tabIndex = -1;
+    const proceed = button('Continue', () => dispatch({ type: 'continue' }));
+    proceed.classList.add('screen-action');
+    content.append(heading, proceed);
+  }
 
   if (state.screen === 'S00') {
     const password = field('Password', 'password', 'password', '');
@@ -211,7 +249,10 @@ export function renderScreen(app, state, dispatch, seconds) {
     const matchingCard = [...shell.querySelectorAll('details')].find(card => card.dataset.assignment === openAssignment);
     if (matchingCard) matchingCard.open = true;
   }
+  const previousScreen = app.firstElementChild?.dataset.screen;
   app.replaceChildren(shell);
+  if (previousScreen === 'welcome' && state.screen === 'game-info') content.querySelector('h2').focus();
+  if (previousScreen === 'game-info' && state.screen === 'S01') brand.focus();
   if (roleScroll && state.screen === 'S02') shell.querySelector('.role-details').scrollTop = roleScroll;
 }
 

@@ -1,17 +1,22 @@
-import { applyTheme, renderScreen, formatTime, roleView } from './screens.js';
+import { applyTheme, createIntro, renderScreen, formatTime, roleView } from './screens.js';
 import { act, tick, createScenario, acceptsPassword, remainingSeconds } from './scenario.js';
 
 applyTheme();
 const app = document.getElementById('app');
+const intro = createIntro();
 const sessionKey = 'suspicion-ui-unlocked';
 let unlocked = false;
 try { unlocked = sessionStorage.getItem(sessionKey) === 'yes'; } catch {}
 let state = unlocked ? createScenario() : { screen: 'S00' };
 let showingRole = false;
 
-function render() { renderScreen(app, roleView(state, showingRole), dispatch, remainingSeconds(state, performance.now())); }
+function render() { renderScreen(app, intro.view(roleView(state, showingRole)), dispatch, remainingSeconds(state, performance.now())); }
 
 function dispatch(action) {
+  if (state.screen === 'S01' && intro.advance(action.type)) {
+    render();
+    return;
+  }
   if ((action.type === 'role' && state.canViewRole) || (action.type === 'back' && showingRole)) {
     state = tick(state, performance.now());
     showingRole = action.type === 'role' ? !showingRole : false;

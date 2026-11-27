@@ -517,6 +517,7 @@ body { background: var(--background-room); color: var(--color-text); font-weight
 }
 .assignment-card summary::-webkit-details-marker { display: none; }
 .assignment-label { color: var(--color-label); overflow-wrap: anywhere; }
+.drink-equivalent { grid-column: 1 / -1; overflow-wrap: anywhere; }
 .assignment-value {
   grid-column: 1;
   overflow-wrap: anywhere;

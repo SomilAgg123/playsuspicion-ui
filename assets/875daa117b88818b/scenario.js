@@ -1,3 +1,5 @@
+import { missions } from './missions.js';
+
 export const TURN_MS = 15_000;
 const names = ['Priya', 'Sam', 'Chad', 'Maya', 'Jordan', 'Bea'];
 
@@ -81,7 +83,7 @@ export function act(current, action, now) {
     if (action.type === 'report-death' && state.information.team === 'Community') return { ...state, dead: true };
     if (action.type === 'confirm-observation') return { ...state, discussion: { ...details, observationConfirmed: true } };
     if (action.type === 'guess-mission' && !state.dead && details.spyGuess === (action.previousGuess ?? null) &&
-        Number.isInteger(action.missionIndex) && action.missionIndex >= 0 && action.missionIndex < 4) {
+        Number.isInteger(action.missionIndex) && action.missionIndex >= 0 && action.missionIndex < missions.length) {
       return { ...state, discussion: { ...details, spyGuess: action.missionIndex } };
     }
   }

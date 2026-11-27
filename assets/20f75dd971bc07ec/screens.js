@@ -63,7 +63,7 @@ export function renderScreen(state, dispatch, seconds) {
       event.preventDefault();
       if (!enter.disabled) dispatch({ type: 'unlock', password: password.input.value });
     });
-    const fields = element('div', 'game-panel form-fields');
+    const fields = element('div', 'form-fields');
     fields.append(password.wrapper);
     content.append(fields, enter);
   }
@@ -86,7 +86,7 @@ export function renderScreen(state, dispatch, seconds) {
       event.preventDefault();
       if (!next.disabled) dispatch({ type: 'join', name: name.input.value.trim(), drunkNumber: Number(number.input.value) });
     });
-    const fields = element('div', 'game-panel form-fields');
+    const fields = element('div', 'form-fields');
     fields.append(name.wrapper, number.wrapper);
     content.append(fields, next);
     update();

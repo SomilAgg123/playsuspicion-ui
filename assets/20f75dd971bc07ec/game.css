@@ -1,39 +1,42 @@
 /* Visual source of truth. Composition rules live in docs/design.md.
    Keep new visual values here, never in screen markup or inline styles. */
 :root {
-  color-scheme: dark;
-  --color-background: #191310;
-  --color-surface: #241b16;
-  --color-surface-raised: #30231c;
-  --color-surface-inset: #1d1612;
-  --color-text: #f1e6d2;
-  --color-label: #c7ad7e;
-  --color-accent: #dcc08e;
-  --color-border: #594531;
-  --color-control-border: #967a56;
-  --color-action: #652c29;
-  --color-action-hover: #793731;
-  --color-action-pressed: #542421;
-  --color-action-border: #cf9b88;
-  --color-focus: #f1cf91;
-  --color-success: #b8cf9c;
-  --color-warning: #e8c17e;
-  --color-danger: #f3a395;
-  --color-danger-surface: #512520;
-  --color-danger-hover: #67302a;
-  --color-disabled-surface: #302822;
-  --color-disabled-text: #b7a995;
+  color-scheme: light;
+  --color-background: #f5e8cb;
+  --color-surface: #f6ead3;
+  --color-surface-raised: #ecd8b5;
+  --color-surface-inset: #fff7e6;
+  --color-text: #342419;
+  --color-label: #654a32;
+  --color-accent: #784320;
+  --color-border: #ad9066;
+  --color-control-border: #927552;
+  --color-action: #813e26;
+  --color-action-hover: #713820;
+  --color-action-pressed: #492719;
+  --color-action-border: #55301e;
+  --color-on-action: #fff7e6;
+  --color-focus: #643716;
+  --color-success: #426039;
+  --color-warning: #88551d;
+  --color-danger: #8c352c;
+  --color-danger-surface: #8c352c;
+  --color-danger-hover: #702e24;
+  --color-disabled-surface: #e2d0b1;
+  --color-disabled-text: #635440;
   --color-transparent: transparent;
-  --color-overlay: #0c0906d9;
-  --color-light: #f1e6d20a;
-  --color-brass-glow: #c7ad7e12;
-  --color-wine-glow: #7937311c;
-  --background-room: radial-gradient(ellipse at 15% 0%, var(--color-brass-glow), var(--color-transparent) 55%), radial-gradient(ellipse at 100% 100%, var(--color-wine-glow), var(--color-transparent) 60%), var(--color-background);
+  --color-overlay: #382519b3;
+  --color-light: #fffcf320;
+  --color-brass-glow: #e8cf9f66;
+  --color-ochre-glow: #dfc08a55;
+  --background-room: radial-gradient(ellipse at top left, var(--color-brass-glow), var(--color-transparent) 65%) fixed,
+                     radial-gradient(ellipse at bottom right, var(--color-ochre-glow), var(--color-transparent) 60%) fixed,
+                     url('assets/parchment.webp') fixed var(--color-background);
   --background-panel: linear-gradient(145deg, var(--color-light), var(--color-transparent) 60%), var(--color-surface);
-  --background-action: linear-gradient(var(--color-light), var(--color-transparent));
+  --background-action: none;
 
-  --font-body: 'Barlow Condensed', Arial, sans-serif;
-  --font-display: 'Bodoni Moda', Georgia, serif;
+  --font-body: 'Barlow', Arial, sans-serif;
+  --font-display: 'Montagu Slab', Georgia, serif;
   --font-size-game: 1.25rem;
   --font-size-statement: clamp(1.75rem, 8vw, 2.25rem);
   --line-height-statement: 1.3;
@@ -41,13 +44,11 @@
   --font-size-label: var(--font-size-game);
   --font-size-control: var(--font-size-game);
   --font-size-score: var(--font-size-game);
-  --font-weight-regular: 400;
-  --font-weight-medium: 500;
-  --font-weight-strong: 600;
+  --font-weight-body: 600;
+  --font-weight-strong: 700;
   --font-weight-display: 700;
   --line-height-body: 1.45;
   --line-height-heading: 1.45;
-  --tracking-brand: 0.045em;
   --tracking-label: 0.015em;
   --tracking-numeric: 0.06em;
 
@@ -61,7 +62,7 @@
   --space-8: 2rem;
   --space-10: 2.5rem;
   --space-12: 3rem;
-  --radius-control: 0.375rem;
+  --radius-control: 3px;
   --radius-panel: 0.75rem;
   --radius-round: 50%;
   --radius-pill: 100vmax;
@@ -69,10 +70,10 @@
   --stroke-strong: 2px;
   --focus-offset: 4px;
   --shadow-panel: 0 8px 28px #00000026, inset 0 1px 0 var(--color-light);
-  --shadow-control: 0 4px 12px #00000026, inset 0 1px 0 var(--color-light);
+  --shadow-control: none;
   --shadow-dialog: 0 24px 80px #00000080;
   --shadow-none: none;
-  --control-height: 3.5rem;
+  --control-height: 3.25rem;
   --radio-size: 1.25rem;
   --avatar-size: 2.75rem;
   --icon-size: 2rem;
@@ -81,7 +82,6 @@
   --timer-width: 5rem;
   --shell-width: 40rem;
   --dialog-width: 28rem;
-  --ornament-size: 0.375rem;
   --motion-fast: 140ms;
   --motion-screen: 240ms;
   --motion-wait: 1200ms;
@@ -94,10 +94,9 @@
 
 * { box-sizing: border-box; }
 html, body { margin: var(--space-0); min-height: 100%; background: var(--color-background); }
-body { color: var(--color-text); font-family: var(--font-body); font-size: var(--font-size-game); line-height: var(--line-height-body); }
+body { background: var(--background-room); color: var(--color-text); font-weight: var(--font-weight-body); font-family: var(--font-body); font-size: var(--font-size-game); line-height: var(--line-height-body); }
 [hidden] { display: none !important; }
 .game-shell {
-  background: var(--background-room);
   width: 100%;
   min-height: 100vh;
   min-height: 100dvh;
@@ -106,7 +105,7 @@ body { color: var(--color-text); font-family: var(--font-body); font-size: var(-
   padding: max(var(--space-6), env(safe-area-inset-top)) max(var(--space-6), env(safe-area-inset-right)) max(var(--space-6), env(safe-area-inset-bottom)) max(var(--space-6), env(safe-area-inset-left));
   display: flex;
   flex-direction: column;
-  gap: var(--space-8);
+  gap: var(--space-6);
 }
 .game-shell :where(h1, h2, p, dl, dd) { margin: var(--space-0); }
 .game-shell :where(input, button, legend) { font-size: var(--font-size-control); }
@@ -118,29 +117,18 @@ body { color: var(--color-text); font-family: var(--font-body); font-size: var(-
   line-height: var(--line-height-heading);
 }
 .game-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding-block: var(--space-2) var(--space-4);
+  border-bottom: var(--stroke-thin) solid var(--color-border);
+}
+.game-header:has(.role-button) {
   position: sticky;
   top: var(--space-0);
   z-index: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-4);
-  background: var(--color-background);
-  padding-block: var(--space-2) var(--space-6);
-  border-bottom: var(--stroke-thin) solid var(--color-border);
-}
-.game-header:has(.role-button) { justify-content: space-between; }
-.brand { letter-spacing: var(--tracking-brand); }
-.game-header::after {
-  content: '';
-  position: absolute;
-  inset-inline-start: 50%;
-  bottom: calc(var(--ornament-size) / -2);
-  width: var(--ornament-size);
-  height: var(--ornament-size);
-  background: var(--color-accent);
-  transform: translateX(-50%) rotate(45deg);
-  box-shadow: 0 0 0 var(--space-2) var(--color-background);
+  justify-content: space-between;
+  background: var(--background-room);
 }
 .screen-content {
   flex: 1;
@@ -159,7 +147,7 @@ body { color: var(--color-text); font-family: var(--font-body); font-size: var(-
   min-width: 0;
 }
 .form-fields { display: flex; flex-direction: column; gap: var(--space-6); }
-.game-field { display: flex; flex-direction: column; gap: var(--space-2); color: var(--color-label); font-size: var(--font-size-label); font-weight: var(--font-weight-medium); }
+.game-field { display: flex; flex-direction: column; gap: var(--space-2); color: var(--color-label); font-size: var(--font-size-label); font-weight: var(--font-weight-strong); }
 .game-field input {
   width: 100%;
   min-width: 0;
@@ -170,7 +158,7 @@ body { color: var(--color-text); font-family: var(--font-body); font-size: var(-
   border: var(--stroke-thin) solid var(--color-control-border);
   border-radius: var(--radius-control);
   font-family: var(--font-body);
-  font-weight: var(--font-weight-regular);
+  font-weight: var(--font-weight-body);
   line-height: var(--line-height-body);
   transition: border-color var(--motion-fast) var(--ease-standard), background-color var(--motion-fast) var(--ease-standard);
 }
@@ -183,7 +171,7 @@ body { color: var(--color-text); font-family: var(--font-body); font-size: var(-
   --button-hover: var(--color-action-hover);
   --button-pressed: var(--color-action-pressed);
   --button-border: var(--color-action-border);
-  --button-text: var(--color-text);
+  --button-text: var(--color-on-action);
   position: relative;
   display: inline-flex;
   align-items: center;
@@ -191,7 +179,7 @@ body { color: var(--color-text); font-family: var(--font-body); font-size: var(-
   gap: var(--space-3);
   width: 100%;
   min-height: var(--control-height);
-  padding: var(--space-3) var(--space-5);
+  padding: var(--space-2) var(--space-4);
   border: var(--stroke-thin) solid var(--button-border);
   border-radius: var(--radius-control);
   background-color: var(--button-background);
@@ -208,6 +196,7 @@ body { color: var(--color-text); font-family: var(--font-body); font-size: var(-
   transition: background-color var(--motion-fast) var(--ease-standard), border-color var(--motion-fast) var(--ease-standard), transform var(--motion-fast) var(--ease-standard);
 }
 .game-button--secondary {
+  --button-text: var(--color-text);
   --button-background: var(--color-surface);
   --button-hover: var(--color-surface-raised);
   --button-pressed: var(--color-surface-inset);
@@ -225,7 +214,7 @@ body { color: var(--color-text); font-family: var(--font-body); font-size: var(-
 .game-button--destructive {
   --button-background: var(--color-danger-surface);
   --button-hover: var(--color-danger-hover);
-  --button-pressed: var(--color-surface-inset);
+  --button-pressed: var(--color-action-pressed);
   --button-border: var(--color-danger);
 }
 @media (hover: hover) {
@@ -244,10 +233,10 @@ body { color: var(--color-text); font-family: var(--font-body); font-size: var(-
 .info-group { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: var(--space-4); min-width: 0; }
 .info-group + .info-group:not(.instruction-block) { border-top: var(--stroke-thin) solid var(--color-border); padding-top: var(--space-5); }
 .info-description, .role-task { flex-basis: 100%; padding-top: var(--space-2); }
-.info-description, .field-description { color: var(--color-label); font-weight: var(--font-weight-regular); }
+.info-description, .field-description { color: var(--color-label); font-weight: var(--font-weight-body); }
 .screen-statement { font: var(--font-weight-display) var(--font-size-statement) / var(--line-height-statement) var(--font-display); text-align: center; text-wrap: balance; }
 .info-row { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: var(--space-2); }
-.info-row dt { color: var(--color-label); font-weight: var(--font-weight-medium); }
+.info-row dt { color: var(--color-label); font-weight: var(--font-weight-strong); }
 .info-row dd { overflow-wrap: anywhere; min-width: 0; }
 .instruction-block {
   padding: var(--space-4);
@@ -260,7 +249,7 @@ body { color: var(--color-text); font-family: var(--font-body); font-size: var(-
 .arrival-content { justify-content: center; }
 
 .buddy-list { border: 0; padding: var(--space-0); margin: var(--space-0); min-width: 0; }
-.buddy-list legend { padding: var(--space-0) var(--space-0) var(--space-4); color: var(--color-label); font-weight: var(--font-weight-medium); letter-spacing: var(--tracking-label); }
+.buddy-list legend { padding: var(--space-0) var(--space-0) var(--space-4); color: var(--color-label); font-weight: var(--font-weight-strong); letter-spacing: var(--tracking-label); }
 .player-list { display: flex; flex-direction: column; gap: var(--space-3); }
 .buddy-choice {
   display: flex;
@@ -327,30 +316,23 @@ body { color: var(--color-text); font-family: var(--font-body); font-size: var(-
 }
 
 @font-face {
-  font-family: 'Barlow Condensed';
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url(assets/fonts/barlow-condensed-400.ttf) format('truetype');
-}
-@font-face {
-  font-family: 'Barlow Condensed';
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-  src: url(assets/fonts/barlow-condensed-500.ttf) format('truetype');
-}
-@font-face {
-  font-family: 'Barlow Condensed';
+  font-family: 'Barlow';
   font-style: normal;
   font-weight: 600;
   font-display: swap;
-  src: url(assets/fonts/barlow-condensed-600.ttf) format('truetype');
+  src: url(assets/fonts/barlow-600.ttf) format('truetype');
 }
 @font-face {
-  font-family: 'Bodoni Moda';
+  font-family: 'Barlow';
   font-style: normal;
   font-weight: 700;
   font-display: swap;
-  src: url(assets/fonts/bodoni-moda-700.ttf) format('truetype');
+  src: url(assets/fonts/barlow-700.ttf) format('truetype');
+}
+@font-face {
+  font-family: 'Montagu Slab';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url(assets/fonts/montagu-slab-700.ttf) format('truetype');
 }

@@ -59,7 +59,12 @@
   --poster-tracking: -0.045em;
   --poster-rule-width: 2.5rem;
   --poster-button-width: 12rem;
+  --poster-opening: 750ms;
+  --poster-welcome-fall: 620ms;
+  --poster-drop: -0.6em;
+  --ease-poster-fall: cubic-bezier(0.42, 0, 0.85, 0.55);
   --poster-beat: 800ms;
+  --poster-final-start: calc(var(--poster-opening) + 2 * var(--poster-beat));
   --poster-hold: 1200ms;
   --poster-fold-duration: 680ms;
   --poster-folds: url('assets/paper-folds.webp');
@@ -179,11 +184,12 @@ body { background: var(--background-room); color: var(--color-text); font-weight
 .poster-word {
   position: relative;
   isolation: isolate;
-  --stamp-delay: 0s;
+  --stamp-delay: var(--poster-opening);
+  --stamp-duration: var(--poster-impact);
 }
 .poster-ink {
   display: block;
-  animation: poster-stamp var(--poster-impact) var(--ease-standard) var(--stamp-delay) backwards;
+  animation: poster-stamp var(--stamp-duration) var(--ease-standard) var(--stamp-delay) backwards;
 }
 .poster-word::before {
   content: '';
@@ -194,7 +200,7 @@ body { background: var(--background-room); color: var(--color-text); font-weight
   background: var(--poster-folds) center / 100% 100% no-repeat;
   opacity: var(--poster-fold-rest);
   animation: paper-buckle var(--poster-fold-duration) var(--ease-standard)
-    calc(var(--stamp-delay) + var(--poster-impact) * 0.65) both;
+    calc(var(--stamp-delay) + var(--stamp-duration) * 0.65) both;
 }
 @keyframes paper-buckle {
   from { opacity: 0; transform: scale(0.77); }
@@ -202,8 +208,23 @@ body { background: var(--background-room); color: var(--color-text); font-weight
   55% { transform: scale(1); }
   to { opacity: var(--poster-fold-rest); transform: scale(1); }
 }
+.poster-welcome {
+  --stamp-duration: var(--poster-welcome-fall);
+}
+.poster-welcome .poster-ink {
+  animation-name: welcome-fall;
+}
+@keyframes welcome-fall {
+  from {
+    opacity: 0;
+    transform: translateY(var(--poster-drop)) scale(var(--poster-start-scale));
+    animation-timing-function: var(--ease-poster-fall);
+  }
+  65% { opacity: 1; transform: scale(var(--poster-recoil)); }
+  to { transform: scale(1); }
+}
 .poster-to {
-  --stamp-delay: var(--poster-beat);
+  --stamp-delay: calc(var(--poster-opening) + var(--poster-beat));
   --poster-fold-inset: var(--poster-to-fold-inset);
   --poster-fold-peak: var(--poster-to-fold-peak);
   --poster-fold-rest: var(--poster-to-fold-rest);
@@ -225,11 +246,11 @@ body { background: var(--background-room); color: var(--color-text); font-weight
 .poster-suspicion {
   --poster-start-scale: var(--poster-name-scale);
   font-size: var(--poster-name-size);
-  --stamp-delay: calc(2 * var(--poster-beat));
+  --stamp-delay: var(--poster-final-start);
 }
 .poster-play {
   max-width: var(--poster-button-width);
-  animation: reveal-play var(--motion-screen) var(--ease-standard) calc(2 * var(--poster-beat) + var(--poster-impact) + var(--poster-hold)) backwards;
+  animation: reveal-play var(--motion-screen) var(--ease-standard) calc(var(--poster-final-start) + var(--poster-impact) + var(--poster-hold)) backwards;
 }
 @keyframes poster-stamp {
   from { opacity: 0; transform: scale(var(--poster-start-scale)); }

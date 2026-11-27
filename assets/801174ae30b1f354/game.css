@@ -420,11 +420,11 @@ body { background: var(--background-room); color: var(--color-text); font-weight
   width: var(--poster-rule-width);
   border-top: var(--stroke-thin) solid var(--color-border);
 }
-.briefing-recovery {
-  border-top: var(--stroke-thin) solid var(--color-border);
-  padding-top: var(--space-3);
-  color: var(--color-accent);
+.briefing-goals {
+  margin: var(--space-2) var(--space-0) var(--space-0);
+  padding-inline-start: var(--space-6);
 }
+.briefing-goals li + li { margin-top: var(--space-2); }
 .arrival-content { justify-content: center; }
 
 .holding-content { gap: var(--space-3); }

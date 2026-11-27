@@ -218,11 +218,16 @@ export function renderScreen(app, state, dispatch, seconds) {
     const heading = element('h2', 'screen-statement matchup');
     heading.tabIndex = -1;
     heading.append('Mafia ', element('span', 'matchup-versus', 'vs.'), ' Community');
+    const list = element('ol', 'briefing-goals');
+    list.append(
+      element('li', '', 'Help your team win by getting your team members to the end'),
+      element('li', '', 'Complete your secret mission before the final roundtable'));
+    const goals = element('div');
+    goals.append(element('p', '', 'You have two goals tonight:'), list);
     brief.append(heading,
-      element('p', '', 'Everyone has a part to play. Next, you’ll discover yours.'),
-      element('p', '', 'Help your team win and complete your own secret mission before the final roundtable.'),
-      element('p', '', 'Throughout the night, you’ll take on tasks and vote out players you suspect.'),
-      element('p', 'briefing-recovery', 'Voted out? You can still return. Complete a recovery mission before the final roundtable begins.'));
+      element('p', '', 'Everyone has a part to play. In the next screen, you’ll discover yours.'),
+      goals,
+      element('p', '', 'If you are voted out, there is a way to return for the final roundtable...stay tuned...'));
     const reveal = button('Reveal my role', () => dispatch({ type: 'reveal-role' }));
     reveal.classList.add('screen-action');
     content.append(brief, reveal);

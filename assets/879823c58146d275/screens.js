@@ -287,7 +287,8 @@ function renderScreen(app, state, dispatch, seconds) {
   shell.dataset.screen = state.screen;
   shell.setAttribute('aria-label', 'Game screen');
   const header = element('header', 'game-header');
-  const brand = element('h1', 'brand', 'Suspicion');
+  const brand = element('h1', 'brand');
+  brand.append(element('span', 'brand-word', 'Suspicion'));
   brand.tabIndex = -1;
   header.append(brand);
   for (const [page, label, available] of [['missions', 'Missions', state.missions], ['role', 'Role', state.canViewRole]]) {
@@ -297,7 +298,7 @@ function renderScreen(app, state, dispatch, seconds) {
     link.setAttribute('aria-pressed', String(state.page === page || (page === 'missions' && state.screen === 'S06')));
     header.append(link);
   }
-  if (state.screen !== 'welcome') shell.append(header);
+  if (state.screen !== 'welcome' && state.screen !== 'game-info') shell.append(header);
   const content = element(['S00', 'S01'].includes(state.screen) ? 'form' : 'div', 'screen-content');
 
   if (state.screen === 'welcome') {
@@ -325,7 +326,7 @@ function renderScreen(app, state, dispatch, seconds) {
       element('h3', 'section-title', 'Your objective'),
       element('p', '', 'Reach the final roundtable alive. Make sure only your team is left for the final vote.')
     );
-    brief.append(heading, twist, objective);
+    brief.append(brand, heading, twist, objective);
     const proceed = button('Continue', () => dispatch({ type: 'continue' }));
     proceed.classList.add('screen-action');
     content.append(brief, proceed);

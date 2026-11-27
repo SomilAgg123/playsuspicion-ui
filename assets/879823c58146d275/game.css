@@ -53,6 +53,15 @@
   --tracking-label: 0.015em;
   --tracking-numeric: 0.06em;
 
+  --font-wordmark: 'Rye', 'Montagu Slab', Georgia, serif;
+  --wordmark-weight: 400;
+  --wordmark-size: 1rem;
+  --wordmark-rule: 0.23em;
+  --wordmark-tracking: -0.025em;
+  --masthead-size: min(17.5cqi, 4.75rem);
+  --poster-inset: clamp(1rem, 5vw, 2rem);
+  --poster-section-gap: clamp(1.5rem, 5vh, 3rem);
+  --poster-fleck: radial-gradient(ellipse at 43% 61%, transparent 0.5px, black 1.25px) 0 0 / 19px 13px;
   --poster-welcome-size: min(10cqi, 3.5rem);
   --poster-name-size: min(15.6cqi, 5.75rem);
   --poster-to-size: var(--font-size-game);
@@ -149,12 +158,32 @@ body { background: var(--background-room); color: var(--color-text); font-weight
 }
 .game-shell :where(h1, h2, p, dl, dd) { margin: var(--space-0); }
 .game-shell :where(input, select, button, legend) { font-size: var(--font-size-control); }
-.brand, .section-title {
+.section-title {
   margin: var(--space-0);
   font-family: var(--font-display);
   font-size: var(--font-size-title);
   font-weight: var(--font-weight-display);
   line-height: var(--line-height-heading);
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font: var(--wordmark-weight) var(--wordmark-size)/var(--poster-leading) var(--font-wordmark);
+  letter-spacing: var(--wordmark-tracking);
+  text-transform: uppercase;
+}
+.brand::before {
+  content: '';
+  flex: none;
+  width: var(--space-6);
+  aspect-ratio: 1;
+  background: var(--cowboy-portrait) center / contain no-repeat;
+}
+.brand-word {
+  display: block;
+  padding-block-end: var(--space-1);
+  border-bottom: var(--wordmark-rule) double currentColor;
 }
 .game-header {
   display: flex;
@@ -456,17 +485,43 @@ body { background: var(--background-room); color: var(--color-text); font-weight
 }
 .field-description { color: var(--color-label); font-weight: var(--font-weight-body); }
 .screen-statement { font: var(--font-weight-display) var(--font-size-statement) / var(--line-height-statement) var(--font-display); text-align: center; text-wrap: balance; }
-.game-brief {
-  flex: 1;
-  align-self: center;
+.game-shell[data-screen="game-info"] .screen-content {
   width: 100%;
   max-width: var(--dialog-width);
-  display: flex;
-  flex-direction: column;
+  align-self: center;
   justify-content: center;
-  padding-block: var(--space-6);
+}
+.game-brief {
+  position: relative;
+  container-type: inline-size;
+  padding: var(--poster-section-gap) var(--poster-inset);
   overflow-wrap: anywhere;
 }
+.game-brief::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: var(--stroke-thin) solid var(--color-text);
+  border-block-width: var(--stroke-strong);
+  transform: skew(-0.22deg, 0.16deg);
+  mask: var(--poster-fleck);
+  pointer-events: none;
+}
+.game-brief .brand {
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-block-end: var(--poster-section-gap);
+  font-size: var(--masthead-size);
+}
+.game-brief .brand::before { width: var(--space-10); }
+.game-brief .brand-word {
+  width: 100%;
+  text-align: center;
+  mask: var(--poster-fleck);
+  padding-block-end: var(--space-2);
+  border-bottom-width: var(--space-2);
+}
+.game-brief + .screen-action { margin-top: var(--space-0); }
 .game-brief .screen-statement { text-align: start; }
 .brief-aside {
   margin-top: var(--space-3);
@@ -662,6 +717,10 @@ body { background: var(--background-room); color: var(--color-text); font-weight
   .game-panel { padding: var(--space-4); }
 }
 @media (max-height: 42rem) {
+  .game-brief { --poster-section-gap: var(--space-3); }
+  .game-brief .brand { gap: var(--space-1); }
+  .game-brief .brand::before { width: var(--space-8); }
+  .brief-objective { margin-top: var(--space-4); }
   .game-shell {
     padding-block: max(var(--space-2), env(safe-area-inset-top)) max(var(--space-2), env(safe-area-inset-bottom));
     row-gap: var(--space-2);
@@ -688,6 +747,14 @@ body { background: var(--background-room); color: var(--color-text); font-weight
   .buddy-choice input:checked::after { display: none; }
   .mic-icon { background: CanvasText; }
   .game-shell :focus-visible, .buddy-choice:has(input:focus-visible), .game-dialog :focus-visible { outline-color: Highlight; }
+}
+
+@font-face {
+  font-family: 'Rye';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(assets/fonts/rye-regular.ttf) format('truetype');
 }
 
 @font-face {

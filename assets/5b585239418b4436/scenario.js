@@ -40,8 +40,9 @@ export function act(current, action, now) {
   if (action.type === 'join' && state.screen === 'S01') {
     const name = typeof action.name === 'string' ? action.name.trim() : '';
     if (!name || name.length > 120 || !Number.isFinite(action.drunkNumber) || action.drunkNumber < 0) return state;
-    return { ...state, screen: 'S02', player: { name, drunkNumber: action.drunkNumber, drinkingPlan: action.drinkingPlan ?? null } };
+    return { ...state, screen: 'role-briefing', player: { name, drunkNumber: action.drunkNumber } };
   }
+  if (action.type === 'reveal-role' && state.screen === 'role-briefing') return { ...state, screen: 'S02' };
   if (action.type === 'next' && state.screen === 'S02') return { ...state, screen: 'S03', canViewRole: true };
   if (action.type === 'arrive' && state.screen === 'S03' && !state.arrived) {
     return { ...state, arrived: true, transitionAt: now + 600 };

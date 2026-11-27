@@ -25,7 +25,7 @@ function dispatch(action) {
     if (!acceptsPassword(action.password)) {
       const input = app.querySelector('input');
       input.setAttribute('aria-invalid', 'true');
-      input.select();
+      app.querySelector('.game-dialog').showModal();
       return;
     }
     try { sessionStorage.setItem(sessionKey, 'yes'); } catch {}

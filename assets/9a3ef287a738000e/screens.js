@@ -68,6 +68,18 @@ export function renderScreen(app, state, dispatch, seconds) {
   if (state.screen === 'S00') {
     const password = field('Password', 'password', 'password', '');
     password.input.autocomplete = 'current-password';
+    const dialog = element('dialog', 'game-dialog');
+    const title = element('h2', 'section-title', 'Wrong password');
+    title.id = 'wrong-password-title';
+    dialog.setAttribute('aria-labelledby', title.id);
+    const actions = element('div', 'dialog-actions');
+    actions.append(button('Try again', () => dialog.close()));
+    dialog.append(title, actions);
+    dialog.addEventListener('close', () => {
+      password.input.focus();
+      password.input.select();
+    });
+    shell.append(dialog);
     const enter = button('Enter', null, { submit: true });
     enter.classList.add('screen-action');
     enter.disabled = true;

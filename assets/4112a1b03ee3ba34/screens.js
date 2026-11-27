@@ -2,7 +2,7 @@ import { revealPaper } from './role-reveal.js';
 import { drinkingPlans, planDescription, formatDrinkAmount, formatSipEstimate } from './drinking-plans.js';
 import { roles, formatRoleTask } from './roles.js';
 import { missions } from './missions.js';
-import { partyTasks, taskBallotSize } from './party-tasks.js';
+import { partyTasks } from './party-tasks.js';
 
 const discussionPages = {
   'death-report': () => "I've been killed",
@@ -107,50 +107,54 @@ function missionCard(info) {
   return card;
 }
 
-function taskPlayerField(content, key, players) {
-  const pairs = taskBallotSize(key, players.length) === 2;
-  const field = element('label', 'game-field', pairs ? 'Which pair was last?' : 'Who was last?');
-  const select = element('select');
-  select.append(new Option(pairs ? 'Choose a pair' : 'Choose a player', ''));
-  const roster = [...players].sort((a, b) => a.name.localeCompare(b.name));
-  roster.forEach((player, index) => {
-    if (pairs) {
-      for (const partner of roster.slice(index + 1)) {
-        select.append(new Option(player.name + ' & ' + partner.name, [player.id, partner.id].join(',')));
-      }
-    } else {
-      select.append(new Option(player.name, player.id));
-    }
-  });
-  field.append(select);
-  content.append(field);
-  return select;
-}
-
 function taskScreen(content, state, dispatch) {
-  const { key, round, stage, players } = state.task;
-  const task = partyTasks[key];
-  const status = element('p');
-  status.setAttribute('role', 'status');
-  content.classList.add('discussion-content');
+  const { key, stage, players, placements } = state.task;
   const title = element('h2', 'section-title task-title', 'New Task');
-  const prompt = element('p', 'screen-statement', stage === 'acknowledge' ? 'You were last.' : task.prompt);
+  const prompt = element('p', 'screen-statement', partyTasks[key].prompt);
   prompt.id = 'task-prompt';
   title.setAttribute('aria-describedby', prompt.id);
+  content.classList.add('discussion-content');
   content.append(title, prompt);
-  if (stage === 'vote') {
-    if (round > 1) content.append(element('p', '', 'No majority. Vote again.'));
-    const choice = taskPlayerField(content, key, players);
-    const submit = button('Submit vote', () => dispatch({
-      type: 'task-vote', key, round, playerIds: choice.value.split(','),
-    }));
-    submit.disabled = true;
-    choice.addEventListener('change', () => { submit.disabled = !choice.value; });
-    content.append(submit);
-  } else if (stage === 'acknowledge') {
-    content.append(button('Done', () => dispatch({ type: 'acknowledge-task', key, round })));
+  const status = element('p');
+  status.setAttribute('role', 'status');
+  if (stage === 'ready') {
+    content.append(button('Done', () => dispatch({ type: 'finish-task', key })));
+  } else if (stage === 'partner') {
+    const field = element('label', 'game-field', 'Who was your partner?');
+    const select = element('select');
+    select.append(new Option('Choose your partner', ''));
+    for (const player of [...players].sort((a, b) => a.name.localeCompare(b.name))) {
+      select.append(new Option(player.name, player.id));
+    }
+    const confirm = button('Confirm partner', () => dispatch({ type: 'choose-task-partner', key, partnerId: select.value }));
+    confirm.disabled = true;
+    select.addEventListener('change', () => { confirm.disabled = !select.value; });
+    field.append(select);
+    content.append(field, confirm);
+  } else if (placements) {
+    const result = stage === 'result' ? element('dialog', 'game-dialog') : element('section', 'game-panel');
+    const heading = element('h2', 'section-title', 'Task results');
+    heading.id = 'task-results';
+    result.setAttribute('aria-labelledby', heading.id);
+    result.append(heading);
+    for (const [index, { multiplier, names }] of placements.entries()) {
+      const row = element('p', 'task-placement');
+      const place = ['Last', 'Second to last', 'Third to last'][index];
+      row.append(element('span', '', place + ' · ' + multiplier + '×'), element('strong', '', names.join(' & ')));
+      result.append(row);
+    }
+    if (stage === 'result') {
+      const acknowledge = () => dispatch({ type: 'acknowledge-task', key });
+      const actions = element('div', 'dialog-actions');
+      actions.append(button('Continue', acknowledge));
+      result.append(actions);
+      result.addEventListener('cancel', event => { event.preventDefault(); acknowledge(); });
+    } else {
+      status.textContent = 'Waiting for the task to finish.';
+    }
+    content.append(result);
   } else {
-    status.textContent = stage === 'waiting-drinks' ? 'Waiting for the task to finish.' : 'Waiting for votes.';
+    status.textContent = 'Waiting for everyone to finish.';
   }
   content.append(status);
 }
@@ -533,7 +537,7 @@ export function renderScreen(app, state, dispatch, seconds) {
   }
   const previousScreen = app.firstElementChild?.dataset.screen;
   const previousTaskStep = app.firstElementChild?.dataset.taskStep;
-  if (state.screen === 'task-event') shell.dataset.taskStep = [state.task.key, state.task.round, state.task.stage].join('/');
+  if (state.screen === 'task-event') shell.dataset.taskStep = [state.task.key, state.task.stage].join('/');
   const previousDrink = app.firstElementChild?.dataset.drinkId;
   const keepSpyDialog = state.screen === 'spy' && app.querySelector('#spy-logged[open]');
   app.replaceChildren(shell);
@@ -545,6 +549,7 @@ export function renderScreen(app, state, dispatch, seconds) {
     heading.tabIndex = -1;
     heading.focus();
   }
+  if (state.screen === 'task-event' && state.task.stage === 'result') content.querySelector('dialog').showModal();
   if (previousScreen === state.screen && Object.hasOwn(discussionPages, state.screen)) {
     content.querySelector('[role="status"]')?.focus();
   }
@@ -564,7 +569,7 @@ export function createNavigation() {
   let lastDrinkId;
   return {
     view(state) {
-      const step = state.task && [state.task.key, state.task.round, state.task.stage].join('/');
+      const step = state.task && [state.task.key, state.task.stage].join('/');
       const drinkId = state.drink?.id;
       if (step !== lastTaskStep || (drinkId && drinkId !== lastDrinkId)) page = null;
       lastDrinkId = drinkId;

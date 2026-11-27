@@ -1,7 +1,7 @@
 import { missions } from './missions.js';
-import { defaultTaskTriggerBudget, taskTriggerMilestone } from './party-tasks.js';
+import { defaultTaskTriggerBudget, taskTriggerMilestone, needsTaskPartner, taskPlacements, publicTaskPlacements } from './party-tasks.js';
 import { canBeEnabler } from './roles.js';
-import { drawEventDrinks, eventDrinkAmount } from './drinking-plans.js';
+import { drawEventDrinks, taskDrinkAssignments } from './drinking-plans.js';
 
 export const TURN_MS = 15_000;
 const names = ['Priya', 'Sam', 'Chad', 'Maya', 'Jordan', 'Bea'];
@@ -42,30 +42,20 @@ export function tick(state, now) {
     return { ...state, screen: 'drink', drink, sampleQueue };
   }
   if (state.screen === 'S07' && state.taskDueAt != null && now >= state.taskDueAt) {
-    const players = [{ id: 'self', name: state.player.name }, ...state.buddies];
-    return { ...state, screen: 'task-event', taskDueAt: undefined,
-      task: { key: 'birthday', round: 1, stage: state.dead ? 'waiting-votes' : 'vote', players },
-      transitionAt: state.dead ? now + 1500 : undefined };
+    return { ...state, screen: 'task-event', taskDueAt: undefined, taskStartedAt: now, finishOrder: [],
+      task: { key: 'birthday', stage: 'ready' } };
   }
-  if (state.screen === 'task-event' && now >= state.transitionAt) {
-    if (state.task.stage === 'waiting-drinks') return { ...state, screen: 'S07', task: undefined, transitionAt: undefined };
-    const { task } = state;
-    if (!state.dead && task.round === 1) {
-      return { ...state, task: { ...task, round: 2, stage: 'vote' }, transitionAt: undefined };
+  if (state.screen === 'task-event') {
+    if (state.task.stage === 'waiting-drinks' && now >= state.transitionAt) {
+      const [drink, ...taskQueue] = state.taskQueue;
+      if (drink) return { ...state, screen: 'drink', drink, taskQueue };
+      return { ...state, screen: 'S07', task: undefined, transitionAt: undefined };
     }
-    const players = sampleRoster(state);
-    const loser = players.find(player => state.previewBallot?.includes(player.id));
-    const lost = loser?.id === 'self';
-    const verifying = loser && !lost && loser.name === state.missions.observes;
-    const amount = loser && eventDrinkAmount(loser, players.length);
-    if (amount && (lost || verifying)) {
-      const drink = { id: 'sample-task', amount };
-      if (verifying) drink.playerName = loser.name;
-      return { ...state, screen: 'drink', drink,
-        task: { ...task, stage: 'waiting-drinks' }, transitionAt: undefined };
+    if (['ready', 'waiting'].includes(state.task.stage)) {
+      const bots = [...state.buddies].sort((a, b) => Number(a.name === state.missions.observes) - Number(b.name === state.missions.observes));
+      const due = bots.filter((bot, index) => now >= state.taskStartedAt + (index + 1) * 400 && !state.finishOrder.includes(bot.id));
+      if (due.length) return sampleFinish(state, due.map(bot => bot.id));
     }
-    const stage = lost ? 'acknowledge' : 'waiting-drinks';
-    return { ...state, task: { ...task, stage }, transitionAt: lost ? undefined : now + 1500 };
   }
   return state;
 }
@@ -104,17 +94,15 @@ export function act(current, action, now, randomInt = max => Math.floor(Math.ran
   if (state.screen === 'drink' && action.drinkId === state.drink.id) {
     const expected = state.drink.playerName ? 'verify-drink' : 'report-drink';
     if (action.type !== expected) return state;
-    if (state.drink.id === 'sample-task') {
-      return { ...state, screen: 'task-event', drink: null, transitionAt: now + 1500 };
-    }
+    if (state.task) return { ...state, screen: 'task-event', drink: null, transitionAt: now + 500 };
     return { ...state, screen: 'S07', drink: null };
   }
-  if (state.screen === 'task-event' && action.key === state.task.key && action.round === state.task.round) {
-    if (action.type === 'task-vote' && state.task.stage === 'vote') {
-      return { ...state, task: { ...state.task, stage: 'waiting-votes' }, previewBallot: action.playerIds, transitionAt: now + 1500 };
-    }
-    if (action.type === 'acknowledge-task' && state.task.stage === 'acknowledge') {
-      return { ...state, screen: 'S07', task: undefined };
+  if (state.screen === 'task-event' && action.key === state.task.key) {
+    if (action.type === 'finish-task' && state.task.stage === 'ready') return sampleFinish(state, ['self']);
+    if (action.type === 'choose-task-partner' && state.task.stage === 'partner' &&
+        state.task.players.some(player => player.id === action.partnerId)) return sampleResults(state, action.partnerId);
+    if (action.type === 'acknowledge-task' && state.task.stage === 'result') {
+      return tick({ ...state, task: { ...state.task, stage: 'waiting-drinks' }, transitionAt: now }, now);
     }
   }
   if (state.screen === 'S07' && state.discussion) {
@@ -143,6 +131,29 @@ function sampleRoster(state) {
     { ...state.player, id: 'self', joined: true },
     ...state.buddies.map(buddy => ({ ...buddy, joined: true, drunkNumber: 4, drinkingPlan: 'buzz' })),
   ];
+}
+
+function sampleFinish(state, ids) {
+  const finishOrder = [...state.finishOrder, ...ids];
+  const next = { ...state, finishOrder, task: { ...state.task, stage: finishOrder.includes('self') ? 'waiting' : 'ready' } };
+  if (finishOrder.length < state.buddies.length + 1) return next;
+  if (needsTaskPartner(state.task.key, finishOrder.length)) {
+    if (finishOrder.at(-1) === 'self') return { ...next, task: { ...next.task, stage: 'partner', players: state.buddies } };
+    return sampleResults(next, finishOrder[0]);
+  }
+  return sampleResults(next);
+}
+
+function sampleResults(state, partnerId) {
+  const players = sampleRoster(state);
+  const placements = taskPlacements(state.finishOrder, partnerId);
+  const taskQueue = [];
+  for (const { playerId, amount } of taskDrinkAssignments(placements, players)) {
+    const recipient = players.find(player => player.id === playerId);
+    if (playerId === 'self') taskQueue.unshift({ id: 'task-own', amount });
+    else if (recipient.name === state.missions.observes) taskQueue.push({ id: 'task-observed', playerName: recipient.name, amount });
+  }
+  return { ...state, task: { key: state.task.key, stage: 'result', placements: publicTaskPlacements(placements, players) }, taskQueue };
 }
 
 function sampleTrigger(state, now, randomInt) {

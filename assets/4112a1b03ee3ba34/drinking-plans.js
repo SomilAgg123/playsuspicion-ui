@@ -1,4 +1,4 @@
-import { defaultTaskTriggerBudget, partyTasks, taskBallotSize } from './party-tasks.js';
+import { defaultTaskTriggerBudget, expectedTaskPortions } from './party-tasks.js';
 
 function drinks(number) {
   return `${number} ${number === 1 ? 'drink' : 'drinks'}`;
@@ -50,9 +50,20 @@ export function planDescription(plan, drunkNumber) {
 export function eventDrinkAmount(player, rosterSize, expectedTriggers = defaultTaskTriggerBudget(rosterSize)) {
   const multiplier = multiplierByPlan.get(player.drinkingPlan);
   if (!player.joined || !(player.drunkNumber > 0 && multiplier > 0)) return 0;
-  const taskLosers = Object.keys(partyTasks).reduce((sum, key) => sum + taskBallotSize(key, rosterSize), 0);
-  const expectedPrompts = expectedTriggers / 2 + taskLosers / rosterSize;
+  const expectedPrompts = expectedTriggers / 2 + expectedTaskPortions(rosterSize);
   return Math.max(1 / sipsPerDrink, player.drunkNumber * multiplier / expectedPrompts);
+}
+
+export function taskDrinkAssignments(placements, players, expectedTriggers) {
+  const assignments = [];
+  for (const { playerIds, multiplier } of placements) {
+    for (const playerId of playerIds) {
+      const player = players.find(member => member.id === playerId);
+      const portion = eventDrinkAmount(player, players.length, expectedTriggers);
+      if (portion > 0) assignments.push({ playerId, amount: portion * multiplier });
+    }
+  }
+  return assignments;
 }
 
 export function drawEventDrinks(players, randomInt, expectedTriggers) {

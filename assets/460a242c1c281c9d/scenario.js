@@ -52,10 +52,15 @@ export function tick(state, now) {
     if (!state.dead && task.round === 1) {
       return { ...state, task: { ...task, round: 2, stage: 'vote' }, transitionAt: undefined };
     }
-    const lost = state.previewBallot?.includes('self');
-    const amount = eventDrinkAmount({ ...state.player, joined: true }, state.buddies.length + 1);
-    if (lost && amount) {
-      return { ...state, screen: 'drink', drink: { id: 'sample-task', amount },
+    const players = sampleRoster(state);
+    const loser = players.find(player => state.previewBallot?.includes(player.id));
+    const lost = loser?.id === 'self';
+    const verifying = loser && !lost && loser.name === state.missions.observes;
+    const amount = loser && eventDrinkAmount(loser, players.length);
+    if (amount && (lost || verifying)) {
+      const drink = { id: 'sample-task', amount };
+      if (verifying) drink.playerName = loser.name;
+      return { ...state, screen: 'drink', drink,
         task: { ...task, stage: 'waiting-drinks' }, transitionAt: undefined };
     }
     const stage = lost ? 'acknowledge' : 'waiting-drinks';
@@ -96,11 +101,12 @@ export function act(current, action, now, randomInt = max => Math.floor(Math.ran
     } };
   }
   if (state.screen === 'drink' && action.drinkId === state.drink.id) {
-    if (state.drink.id === 'sample-task' && action.type === 'report-drink') {
+    const expected = state.drink.playerName ? 'verify-drink' : 'report-drink';
+    if (action.type !== expected) return state;
+    if (state.drink.id === 'sample-task') {
       return { ...state, screen: 'task-event', drink: null, transitionAt: now + 1500 };
     }
-    if (action.type === 'report-drink' && !state.drink.playerName) return { ...state, screen: 'S07', drink: null };
-    if (action.type === 'verify-drink' && state.drink.playerName) return { ...state, screen: 'S07', drink: null };
+    return { ...state, screen: 'S07', drink: null };
   }
   if (state.screen === 'task-event' && action.key === state.task.key && action.round === state.task.round) {
     if (action.type === 'task-vote' && state.task.stage === 'vote') {
@@ -131,15 +137,20 @@ export function act(current, action, now, randomInt = max => Math.floor(Math.ran
   return state;
 }
 
-function sampleTrigger(state, now, randomInt) {
-  const players = [
+function sampleRoster(state) {
+  return [
     { ...state.player, id: 'self', joined: true },
-    ...names.map(name => ({ id: name, joined: true, drunkNumber: 4, drinkingPlan: 'buzz' })),
+    ...state.buddies.map(buddy => ({ ...buddy, joined: true, drunkNumber: 4, drinkingPlan: 'buzz' })),
   ];
+}
+
+function sampleTrigger(state, now, randomInt) {
+  const players = sampleRoster(state);
+  const observed = state.buddies.find(buddy => buddy.name === state.missions.observes);
   const sampleQueue = drawEventDrinks(players, randomInt).flatMap(({ playerId, amount }) => {
     if (playerId === 'self') return [{ id: 'sample-own', amount }];
     // The simulated observed player reports their own assignment.
-    if (playerId === state.missions.observes) return [{ id: 'sample-observed', playerName: playerId, amount }];
+    if (playerId === observed.id) return [{ id: 'sample-observed', playerName: observed.name, amount }];
     return [];
   });
   const triggerCount = (state.triggerCount ?? 0) + 1;

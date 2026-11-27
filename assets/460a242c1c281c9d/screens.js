@@ -561,10 +561,13 @@ export function renderScreen(app, state, dispatch, seconds) {
 export function createNavigation() {
   let page = null;
   let lastTaskStep;
+  let lastDrinkId;
   return {
     view(state) {
       const step = state.task && [state.task.key, state.task.round, state.task.stage].join('/');
-      if (step !== lastTaskStep) page = null;
+      const drinkId = state.drink?.id;
+      if (step !== lastTaskStep || (drinkId && drinkId !== lastDrinkId)) page = null;
+      lastDrinkId = drinkId;
       lastTaskStep = step;
       if (page === 'role' && state.canViewRole) return { ...state, screen: 'S02', page };
       if (page === 'missions' && state.missions && state.screen !== 'S06') return { ...state, screen: 'S06', page };

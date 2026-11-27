@@ -59,6 +59,8 @@
   --poster-leading: 1;
   --poster-tracking: -0.045em;
   --poster-rule-width: 2.5rem;
+  --cowboy-portrait-size: clamp(5rem, 26vw, 8rem);
+  --cowboy-portrait: url('assets/suspicious-cowboy.webp');
   --poster-button-width: 12rem;
   --poster-opening: 750ms;
   --poster-welcome-fall: 620ms;
@@ -66,6 +68,7 @@
   --ease-poster-fall: cubic-bezier(0.42, 0, 0.85, 0.55);
   --poster-beat: 800ms;
   --poster-final-start: calc(var(--poster-opening) + 2 * var(--poster-beat));
+  --poster-cowboy-start: calc(var(--poster-final-start) + var(--poster-beat));
   --poster-hold: 1200ms;
   --poster-fold-duration: 680ms;
   --poster-folds: url('assets/paper-folds.webp');
@@ -190,6 +193,19 @@ body { background: var(--background-room); color: var(--color-text); font-weight
   letter-spacing: var(--poster-tracking);
   text-transform: uppercase;
 }
+.poster-title::before,
+.game-shell[data-screen="S07"] .discussion-content::before {
+  content: "";
+  width: var(--cowboy-portrait-size);
+  aspect-ratio: 1;
+  flex: none;
+  align-self: center;
+  background: var(--cowboy-portrait) center / contain no-repeat;
+}
+.poster-title::before {
+  margin-bottom: var(--space-3);
+  animation: welcome-fall var(--poster-welcome-fall) var(--ease-standard) var(--poster-cowboy-start) backwards;
+}
 .poster-word {
   position: relative;
   isolation: isolate;
@@ -259,7 +275,7 @@ body { background: var(--background-room); color: var(--color-text); font-weight
 }
 .poster-play {
   max-width: var(--poster-button-width);
-  animation: reveal-play var(--motion-screen) var(--ease-standard) calc(var(--poster-final-start) + var(--poster-impact) + var(--poster-hold)) backwards;
+  animation: reveal-play var(--motion-screen) var(--ease-standard) calc(var(--poster-cowboy-start) + var(--poster-welcome-fall) + var(--poster-hold)) backwards;
 }
 @keyframes poster-stamp {
   from { opacity: 0; transform: scale(var(--poster-start-scale)); }

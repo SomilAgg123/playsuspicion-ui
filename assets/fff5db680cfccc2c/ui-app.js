@@ -1,4 +1,4 @@
-import { applyTheme, createIntro, renderScreen, formatTime, createNavigation } from './screens.js';
+import { applyTheme, createIntro, createScreenRenderer, formatTime, createNavigation } from './screens.js';
 import { act, tick, createScenario, acceptsPassword, remainingSeconds } from './scenario.js';
 
 applyTheme();
@@ -14,8 +14,12 @@ let state = {
   unlocked: ['yes', 'mafia', 'community'].includes(savedEntry),
 };
 const navigation = createNavigation();
+const renderPlayer = createScreenRenderer(app, dispatch);
 
-function render() { renderScreen(app, intro.view(navigation.view(state)), dispatch, remainingSeconds(state, performance.now())); }
+function render() {
+  const { sampleChecks, taskQueue, finishOrder, ...view } = state;
+  renderPlayer(intro.view(navigation.view(view)), remainingSeconds(state, performance.now()));
+}
 
 function dispatch(action) {
   if (state.screen === 'S01' && intro.advance(action.type)) {

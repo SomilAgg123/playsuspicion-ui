@@ -172,6 +172,7 @@ function spyForm(app, content, details, dispatch) {
     select.append(option);
   });
   const saved = details.spyGuess;
+  select.dataset.savedGuess = saved ?? '';
   select.value = saved === null ? '' : String(saved);
   field.append(select);
 
@@ -242,7 +243,46 @@ export function createIntro() {
   };
 }
 
-export function renderScreen(app, state, dispatch, seconds) {
+// Retain the originating controls so a check can return to an unsubmitted selection.
+export function createScreenRenderer(app, dispatch) {
+  let pageSignature;
+  let returnScreen;
+  let displayedCheck;
+  const checksButton = button('', () => dispatch({ type: 'drink-checks' }), { variant: 'secondary' });
+  checksButton.dataset.drinkChecks = '';
+
+  return (state, seconds, force = false) => {
+    const { drinkChecks, openDrinkCheck, ...page } = state;
+    if (openDrinkCheck) {
+      if (!displayedCheck) returnScreen = app.firstElementChild;
+      const checkSignature = JSON.stringify(openDrinkCheck);
+      if (checkSignature !== displayedCheck || force) {
+        renderScreen(app, { ...page, screen: 'drink', drink: openDrinkCheck, page: 'drink-checks' }, dispatch, seconds);
+      }
+      displayedCheck = checkSignature;
+      return;
+    }
+
+    const signature = JSON.stringify(page);
+    if (returnScreen) app.replaceChildren(returnScreen);
+    if (signature !== pageSignature || force) renderScreen(app, page, dispatch, seconds);
+    pageSignature = signature;
+    const shell = app.firstElementChild;
+    if (drinkChecks) {
+      checksButton.textContent = `Drink checks (${drinkChecks.count})`;
+      if (checksButton.parentNode !== shell) shell.append(checksButton);
+    } else {
+      checksButton.remove();
+    }
+    if (displayedCheck && shell.dataset.screen === returnScreen?.dataset.screen && !shell.querySelector('dialog[open]')) {
+      (drinkChecks ? checksButton : shell.querySelector('.brand'))?.focus();
+    }
+    returnScreen = null;
+    displayedCheck = null;
+  };
+}
+
+function renderScreen(app, state, dispatch, seconds) {
   const shell = element('section', 'game-shell');
   shell.dataset.screen = state.screen;
   shell.setAttribute('aria-label', 'Game screen');
@@ -522,6 +562,9 @@ export function renderScreen(app, state, dispatch, seconds) {
     content.append(title, card,
       button(playerName ? `I saw ${playerName} drink it` : 'I drank this amount',
         () => dispatch({ type: playerName ? 'verify-drink' : 'report-drink', drinkId: id })), status);
+    if (state.page === 'drink-checks') {
+      content.append(button('Back', () => dispatch({ type: 'back' }), { variant: 'secondary' }));
+    }
   }
 
   shell.append(content);
@@ -536,6 +579,14 @@ export function renderScreen(app, state, dispatch, seconds) {
   const previousScreen = app.firstElementChild?.dataset.screen;
   const previousTaskStep = app.firstElementChild?.dataset.taskStep;
   if (state.screen === 'task-event') shell.dataset.taskStep = [state.task.key, state.task.stage].join('/');
+  const previousSelect = app.querySelector('select');
+  const currentSelect = shell.querySelector('select');
+  if (previousSelect && currentSelect && previousScreen === state.screen &&
+      ((state.screen === 'spy' && previousSelect.dataset.savedGuess === currentSelect.dataset.savedGuess) ||
+       (state.screen === 'task-event' && previousTaskStep === shell.dataset.taskStep))) {
+    currentSelect.value = previousSelect.value;
+    currentSelect.dispatchEvent(new Event('change'));
+  }
   const previousDrink = app.firstElementChild?.dataset.drinkId;
   const keepSpyDialog = state.screen === 'spy' && app.querySelector('#spy-logged[open]');
   app.replaceChildren(shell);
@@ -563,15 +614,19 @@ export function renderScreen(app, state, dispatch, seconds) {
 
 export function createNavigation() {
   let page = null;
+  let checkId;
   let lastTaskStep;
   let lastDrinkId;
   return {
     view(state) {
       const step = state.task && [state.task.key, state.task.stage].join('/');
       const drinkId = state.drink?.id;
+      if ((drinkId && drinkId !== lastDrinkId) || state.task?.stage === 'result') checkId = null;
       if (step !== lastTaskStep || (drinkId && drinkId !== lastDrinkId)) page = null;
       lastDrinkId = drinkId;
       lastTaskStep = step;
+      if (checkId && state.drinkChecks?.next.id === checkId) return { ...state, openDrinkCheck: state.drinkChecks.next };
+      checkId = null;
       if (page === 'role' && state.canViewRole) return { ...state, screen: 'S02', page };
       if (page === 'missions' && state.missions && state.screen !== 'S06') return { ...state, screen: 'S06', page };
       if (canOpenDiscussionPage(state, page)) return { ...state, screen: page, page };
@@ -579,12 +634,21 @@ export function createNavigation() {
       return state;
     },
     navigate(action, state) {
+      if (action === 'drink-checks' && state.drinkChecks) {
+        checkId = state.drinkChecks.next.id;
+        return '.screen-statement';
+      }
+      if (action === 'back' && checkId) {
+        checkId = null;
+        return '[data-drink-checks]';
+      }
       const previous = page;
       if (action === 'back' && page) page = null;
       else if (action === 'role' && state.canViewRole) page = page === action ? null : action;
       else if (action === 'missions' && state.missions) page = page === action || state.screen === 'S06' ? null : action;
       else if (canOpenDiscussionPage(state, action)) page = action;
       else return;
+      checkId = null;
       return page ? '.brand' : `[data-navigation="${action === 'back' ? previous : action}"]`;
     },
   };

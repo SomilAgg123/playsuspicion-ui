@@ -1,5 +1,5 @@
 import { revealPaper } from './role-reveal.js';
-import { drinkingPlans } from './drinking-plans.js';
+import { drinkingPlans, formatDrinkAmount } from './drinking-plans.js';
 import { roles, formatRoleTask } from './roles.js';
 import { missions } from './missions.js';
 
@@ -456,6 +456,19 @@ export function renderScreen(app, state, dispatch, seconds) {
     if (state.dead) content.append(element('p', '', "You've been killed."));
   }
 
+  if (state.screen === 'drink') {
+    const { id, amount, playerName } = state.drink;
+    const title = element('h2', 'screen-statement', 'Drink');
+    title.tabIndex = -1;
+    const status = element('p');
+    status.setAttribute('role', 'status');
+    content.classList.add('discussion-content');
+    shell.dataset.drinkId = id;
+    content.append(title, assignmentCard(playerName ?? 'Your amount', formatDrinkAmount(amount)),
+      button(playerName ? 'I saw them drink it' : 'I drank this amount',
+        () => dispatch({ type: playerName ? 'verify-drink' : 'report-drink', drinkId: id })), status);
+  }
+
   shell.append(content);
   // A background game transition can redraw the role the player is reading.
   const roleScroll = app.querySelector('.role-details')?.scrollTop;
@@ -466,9 +479,12 @@ export function renderScreen(app, state, dispatch, seconds) {
     if (matchingCard) matchingCard.open = true;
   }
   const previousScreen = app.firstElementChild?.dataset.screen;
+  const previousDrink = app.firstElementChild?.dataset.drinkId;
   const keepSpyDialog = state.screen === 'spy' && app.querySelector('#spy-logged[open]');
   app.replaceChildren(shell);
   if (keepSpyDialog) shell.querySelector('#spy-logged')?.showModal();
+  if (state.screen === 'drink' && previousDrink !== state.drink.id) content.querySelector('h2').focus();
+  if (previousScreen === 'drink' && state.screen === 'S07') brand.focus();
   if (previousScreen === state.screen && Object.hasOwn(discussionPages, state.screen)) {
     content.querySelector('[role="status"]')?.focus();
   }

@@ -2,6 +2,15 @@ function drinks(number) {
   return `${number} ${number === 1 ? 'drink' : 'drinks'}`;
 }
 
+const fractions = new Map([[0.25, '¼'], [0.5, '½'], [0.75, '¾']]);
+
+export function formatDrinkAmount(amount) {
+  const whole = Math.floor(amount);
+  const fraction = fractions.get(amount - whole);
+  if (!fraction) return drinks(amount);
+  return `${whole || ''}${fraction} ${whole ? 'drinks' : 'drink'}`;
+}
+
 export const drinkingPlans = [
   { id: 'none', label: 'Not drinking', amount: () => '0 drinks' },
   { id: 'buzz', label: 'Buzz', amount: n => n == null ? 'Half your drunk number' : drinks(n / 2) },

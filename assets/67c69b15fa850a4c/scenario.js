@@ -32,6 +32,10 @@ export function tick(state, now) {
   while (state.screen === 'S05' && now >= state.mic.endsAt) {
     state = withTurn(state, state.turnIndex + 1, state.mic.endsAt);
   }
+  if (state.screen === 'S07' && state.sampleDrink && now >= state.drinkAt) {
+    const drink = state.sampleDrink;
+    return { ...state, screen: 'drink', drink, sampleDrink: null };
+  }
   return state;
 }
 
@@ -60,9 +64,17 @@ export function act(current, action, now) {
     return { ...state, screen: 'S06', missions: { observer: 'Maya', observes: 'Jordan', spiesOn: 'Bea' } };
   }
   if (action.type === 'finish-missions' && state.screen === 'S06') {
-    return { ...state, screen: 'S07', discussion: {
+    const participates = state.player.drunkNumber > 0 && ['buzz', 'good-time', 'all-out'].includes(state.player.drinkingPlan);
+    const sampleDrink = participates ? { id: 'sample-own', amount: 0.25 } : sampleVerification(state);
+    return { ...state, screen: 'S07', sampleDrink, drinkAt: now + 4000, discussion: {
       observedMission: 'Give Sam a hug', observationConfirmed: false, spyGuess: null,
     } };
+  }
+  if (state.screen === 'drink' && action.drinkId === state.drink.id) {
+    if (action.type === 'report-drink' && !state.drink.playerName) {
+      return { ...state, screen: 'S07', drink: null, sampleDrink: sampleVerification(state), drinkAt: now + 4000 };
+    }
+    if (action.type === 'verify-drink' && state.drink.playerName) return { ...state, screen: 'S07', drink: null };
   }
   if (state.screen === 'S07' && state.discussion) {
     const details = state.discussion;
@@ -78,6 +90,10 @@ export function act(current, action, now) {
     return withTurn(state, state.turnIndex + 1, now);
   }
   return state;
+}
+
+function sampleVerification(state) {
+  return { id: 'sample-observed', playerName: state.missions.observes, amount: 0.5 };
 }
 
 export function remainingSeconds(state, now) {

@@ -4,5 +4,3 @@ export const missions = [
   name => `Swap an item of clothing with ${name}`,
   name => `Swerve a high five from ${name}`,
 ];
-
-export const spyGuessLimit = 2;

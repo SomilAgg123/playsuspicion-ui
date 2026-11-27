@@ -491,7 +491,10 @@ body { background: var(--background-room); color: var(--color-text); font-weight
 }
 .briefing-goals li + li { margin-top: var(--space-2); }
 .arrival-content, .discussion-content { justify-content: center; }
+.discussion-content { overflow-wrap: anywhere; }
 .discussion-content [role="status"]:empty { display: none; }
+.completed-action { flex-direction: column; gap: var(--space-1); }
+.action-status { font-family: var(--font-body); color: var(--color-success); }
 
 .missions-content { gap: var(--space-3); }
 .assignment-card {
@@ -551,6 +554,11 @@ body { background: var(--background-room); color: var(--color-text); font-weight
   overflow-wrap: anywhere;
   font: var(--font-weight-display) var(--font-size-statement) / var(--line-height-statement) var(--font-display);
 }
+.mission-card .assignment-value {
+  flex-shrink: 0;
+  color: var(--color-success);
+  font: var(--font-weight-strong) var(--font-size-label) / var(--line-height-body) var(--font-body);
+}
 .mission-card summary::after { flex-shrink: 0; }
 .mission-card .assignment-instructions p:first-child {
   font: var(--font-weight-display) var(--font-size-title) / var(--line-height-statement) var(--font-display);
@@ -588,6 +596,7 @@ body { background: var(--background-room); color: var(--color-text); font-weight
 .result-panel[data-tone="danger"] { border-color: var(--color-danger); }
 .game-dialog { width: calc(100% - var(--space-8)); max-width: var(--dialog-width); max-height: calc(100dvh - var(--space-8)); margin: auto; padding: var(--space-6); overflow: auto; background: var(--background-panel); color: var(--color-text); border: var(--stroke-thin) solid var(--color-control-border); border-radius: var(--radius-panel); box-shadow: var(--shadow-dialog); font: inherit; }
 .game-dialog::backdrop { background: var(--color-overlay); }
+.game-dialog .section-title + p { margin-top: var(--space-2); }
 .dialog-actions { display: flex; flex-wrap: wrap; gap: var(--space-3); margin-top: var(--space-6); }
 .dialog-actions .game-button { flex: 1 1 var(--timer-width); }
 

@@ -61,17 +61,16 @@ export function act(current, action, now) {
   }
   if (action.type === 'finish-missions' && state.screen === 'S06') {
     return { ...state, screen: 'S07', discussion: {
-      observedMission: 'Give Sam a hug', observationConfirmed: false, guesses: [], spyCorrect: false,
+      observedMission: 'Give Sam a hug', observationConfirmed: false, spyGuess: null,
     } };
   }
   if (state.screen === 'S07' && state.discussion) {
     const details = state.discussion;
     if (action.type === 'report-death' && state.information.team === 'Community') return { ...state, dead: true };
     if (action.type === 'confirm-observation') return { ...state, discussion: { ...details, observationConfirmed: true } };
-    if (action.type === 'guess-mission' && !state.dead && !details.spyCorrect && details.guesses.length < 2 &&
-        action.attempt === details.guesses.length + 1 && !details.guesses.includes(action.missionIndex) &&
+    if (action.type === 'guess-mission' && !state.dead && details.spyGuess === (action.previousGuess ?? null) &&
         Number.isInteger(action.missionIndex) && action.missionIndex >= 0 && action.missionIndex < 4) {
-      return { ...state, discussion: { ...details, guesses: [...details.guesses, action.missionIndex], spyCorrect: action.missionIndex === 2 } };
+      return { ...state, discussion: { ...details, spyGuess: action.missionIndex } };
     }
   }
   if (action.type === 'skip' && state.screen === 'S05') return finishMic(state);

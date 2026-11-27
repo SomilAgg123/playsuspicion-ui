@@ -41,9 +41,12 @@ function dispatch(action) {
     try { sessionStorage.setItem(sessionKey, action.team); } catch {}
     state = createScenario(action.team);
   } else {
-    state = act(state, action, performance.now());
+    const next = act(state, action, performance.now());
+    if (next === state) return false;
+    state = next;
   }
   render();
+  return true;
 }
 
 render();

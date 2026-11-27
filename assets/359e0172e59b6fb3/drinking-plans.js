@@ -1,10 +1,12 @@
+import { defaultTaskTriggerBudget, partyTasks, taskBallotSize } from './party-tasks.js';
+
 function drinks(number) {
   return `${number} ${number === 1 ? 'drink' : 'drinks'}`;
 }
 
 const fractions = new Map([
-  [1 / 8, '⅛'], [1 / 4, '¼'], [1 / 3, '⅓'], [3 / 8, '⅜'], [1 / 2, '½'],
-  [5 / 8, '⅝'], [2 / 3, '⅔'], [3 / 4, '¾'], [7 / 8, '⅞'],
+  [1 / 8, '⅛'], [1 / 6, '⅙'], [1 / 4, '¼'], [1 / 3, '⅓'], [3 / 8, '⅜'], [1 / 2, '½'],
+  [5 / 8, '⅝'], [2 / 3, '⅔'], [3 / 4, '¾'], [5 / 6, '⅚'], [7 / 8, '⅞'],
 ]);
 const sipsPerDrink = 16;
 
@@ -21,7 +23,8 @@ export function formatDrinkAmount(amount) {
   const whole = Math.floor(amount);
   for (let denominator = 2; denominator <= 32; denominator++) {
     const numerator = Math.round((amount - whole) * denominator);
-    if (whole + numerator / denominator !== amount) continue;
+    const candidate = whole + numerator / denominator;
+    if (numerator === 0 || numerator === denominator || Math.abs(candidate - amount) > Number.EPSILON * amount) continue;
     const glyph = fractions.get(numerator / denominator);
     const fraction = glyph ?? `${numerator}/${denominator}`;
     if (!whole) return `${fraction} of a drink`;
@@ -32,34 +35,38 @@ export function formatDrinkAmount(amount) {
 
 export const drinkingPlans = [
   { id: 'none', label: 'Not drinking', multiplier: 0, hint: '0 drinks' },
-  { id: 'buzz', label: 'Buzz', multiplier: 0.5, hint: 'Half your drunk number' },
-  { id: 'good-time', label: 'A good time', multiplier: 1, hint: 'Your drunk number' },
-  { id: 'all-out', label: 'All out', multiplier: 1.5, hint: '1.5 times your drunk number' },
+  { id: 'buzz', label: 'Buzz', multiplier: 1 / 6, hint: 'One sixth of your drunk number' },
+  { id: 'good-time', label: 'A good time', multiplier: 1 / 3, hint: 'One third of your drunk number' },
+  { id: 'all-out', label: 'All out', multiplier: 1 / 2, hint: 'Half your drunk number' },
 ];
 
 const multiplierByPlan = new Map(drinkingPlans.map(plan => [plan.id, plan.multiplier]));
 
 export function planDescription(plan, drunkNumber) {
   const total = drunkNumber * plan.multiplier;
-  return drunkNumber == null || !Number.isFinite(total) ? plan.hint : drinks(total);
+  return drunkNumber == null || !Number.isFinite(total) ? plan.hint : formatDrinkAmount(total);
 }
 
-export function eventDrinkAmount(player, rosterSize) {
+export function eventDrinkAmount(player, rosterSize, expectedTriggers = defaultTaskTriggerBudget(rosterSize)) {
   const multiplier = multiplierByPlan.get(player.drinkingPlan);
   if (!player.joined || !(player.drunkNumber > 0 && multiplier > 0)) return 0;
-  return Math.max(1 / sipsPerDrink, (player.drunkNumber / (rosterSize / 2)) * multiplier);
+  const taskLosers = Object.keys(partyTasks).reduce((sum, key) => sum + taskBallotSize(key, rosterSize), 0);
+  const expectedPrompts = expectedTriggers / 2 + taskLosers / rosterSize;
+  return player.drunkNumber * multiplier / expectedPrompts;
 }
 
-export function drawEventDrinks(players, randomInt) {
-  const eligible = players.filter(player => eventDrinkAmount(player, players.length) > 0);
+export function drawEventDrinks(players, randomInt, expectedTriggers) {
+  const eligible = players.map(player => ({
+    playerId: player.id, amount: eventDrinkAmount(player, players.length, expectedTriggers),
+  })).filter(assignment => assignment.amount > 0);
   let needed = Math.floor(eligible.length / 2);
   if (eligible.length % 2) needed += randomInt(2);
   const assignments = [];
-  for (const [index, player] of eligible.entries()) {
+  for (const [index, assignment] of eligible.entries()) {
     // Taking k of the remaining n with probability k/n samples uniformly without replacement.
     if (needed === 0) break;
     if (randomInt(eligible.length - index) >= needed) continue;
-    assignments.push({ playerId: player.id, amount: eventDrinkAmount(player, players.length) });
+    assignments.push(assignment);
     needed--;
   }
   return assignments;

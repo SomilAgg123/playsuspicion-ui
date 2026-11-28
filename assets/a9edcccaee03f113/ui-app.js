@@ -45,6 +45,7 @@ function dispatch(action) {
     try { sessionStorage.setItem(sessionKey, action.team); } catch {}
     state = createScenario(action.team);
   } else {
+    if (action.type === 'join' && state.otherPlayers.some(player => player.name.toLowerCase() === action.name.toLowerCase())) return 'NAME_TAKEN';
     const next = act(state, action, performance.now());
     if (next === state) return false;
     state = next;

@@ -3,7 +3,7 @@ import { killPrompts, KILL_WINDOW_MS, defaultTaskTriggerBudget, taskTriggerMiles
 import { canBeBarkeep } from './roles.js';
 import { drawEventDrinks, taskDrinkAssignments } from './drinking-plans.js';
 
-const names = ['Priya', 'Sam', 'Chad', 'Maya', 'Jordan', 'Bea'];
+const names = ['Priya', 'Sam', 'Chad', 'Maya', 'Jordan', 'Bea', 'Lee'];
 
 export function createScenario(team = 'outlaws') {
   return {
@@ -273,7 +273,6 @@ function sampleTrigger(state, now, randomInt) {
     if (playerId === observed.id) return [{ id: `sample-observed-${triggerCount}`, playerName: observed.name, amount }];
     return [];
   });
-  // The seven-person preview demonstrates the first of the twelve milestones.
   const taskDueAt = triggerCount === taskTriggerMilestone(1, defaultTaskTriggerBudget(players.length)) ? now + 1500 : state.taskDueAt;
   let killTask = state.killTask;
   if (triggerCount === 1 && state.information.team === 'Outlaws' && !state.dead) {

@@ -312,6 +312,27 @@ function taskScreen(content, state, dispatch) {
   content.append(status);
 }
 
+function showGuessConfirmation(app) {
+  const dialog = element('dialog', 'game-dialog');
+  dialog.id = 'spy-logged';
+  const title = element('h2', 'section-title', 'Guess logged');
+  title.id = 'spy-logged-title';
+  dialog.setAttribute('aria-labelledby', title.id);
+  const message = element('p', '', 'You’ll find out at the final roundtable if you were correct. You can change your guess until then.');
+  message.id = 'spy-logged-message';
+  dialog.setAttribute('aria-describedby', message.id);
+  const actions = element('div', 'dialog-actions');
+  actions.append(button('OK', () => dialog.close()));
+  dialog.append(title, message, actions);
+  dialog.addEventListener('close', () => {
+    dialog.remove();
+    const target = app.querySelector('dialog[open] button, [data-screen="spy"] select, [data-screen="drink"] h2');
+    (target ?? app.querySelector('.brand'))?.focus();
+  });
+  document.body.append(dialog);
+  dialog.showModal();
+}
+
 function spyForm(app, content, details, dispatch) {
   const field = element('label', 'game-field', 'Secret Mission');
   const select = element('select');
@@ -329,26 +350,13 @@ function spyForm(app, content, details, dispatch) {
   select.value = saved === null ? '' : String(saved);
   field.append(select);
 
-  const dialog = element('dialog', 'game-dialog');
-  dialog.id = 'spy-logged';
-  const title = element('h2', 'section-title', 'Guess logged');
-  title.id = 'spy-logged-title';
-  dialog.setAttribute('aria-labelledby', title.id);
-  const message = element('p', '', 'You’ll find out at the final roundtable if you were correct. You can change your guess until then.');
-  message.id = 'spy-logged-message';
-  dialog.setAttribute('aria-describedby', message.id);
-  const actions = element('div', 'dialog-actions');
-  actions.append(button('OK', () => dialog.close()));
-  dialog.append(title, message, actions);
-  dialog.addEventListener('close', () => select.focus());
-
   const submit = button(saved === null ? 'Log guess' : 'Update guess', async () => {
     const logged = await dispatch({ type: 'guess-mission', missionIndex: Number(select.value), previousGuess: saved });
-    if (logged) app.querySelector('#spy-logged')?.showModal();
+    if (logged) showGuessConfirmation(app);
   });
   submit.disabled = true;
   select.addEventListener('change', () => { submit.disabled = !select.value || Number(select.value) === saved; });
-  content.append(field, submit, dialog);
+  content.append(field, submit);
 }
 
 function discussionForm(app, content, state, dispatch) {
@@ -680,6 +688,15 @@ function renderScreen(app, state, dispatch) {
 
   if (state.screen === 'S01') {
     const name = field('Name', 'name', 'text', state.player.name);
+    const nameError = element('span', 'field-description');
+    nameError.id = 'join-name-error';
+    nameError.hidden = true;
+    name.wrapper.append(nameError);
+    name.input.addEventListener('input', () => {
+      name.input.removeAttribute('aria-invalid');
+      name.input.removeAttribute('aria-describedby');
+      nameError.hidden = true;
+    });
     const number = field('Drunk number', 'drunkNumber', 'number', state.player.drunkNumber);
     const hint = element('span', 'field-description', 'Type the number of drinks it takes to get drunk.');
     hint.id = 'drunk-number-description';
@@ -690,12 +707,21 @@ function renderScreen(app, state, dispatch) {
     const next = button('Next', null, { submit: true });
     next.classList.add('screen-action');
     function update() {
-      next.disabled = !state.canJoin || !plan.opener.value || !name.input.value.trim() || !number.input.validity.valid;
+      next.disabled = !state.canJoin || !plan.opener.value || !name.input.value.trim() || !nameError.hidden || !number.input.validity.valid;
     }
     content.addEventListener('input', update);
-    content.addEventListener('submit', event => {
+    content.addEventListener('submit', async event => {
       event.preventDefault();
-      if (!next.disabled) dispatch({ type: 'join', name: name.input.value.trim(), drunkNumber: Number(number.input.value), drinkingPlan: plan.opener.value });
+      if (next.disabled) return;
+      const result = await dispatch({ type: 'join', name: name.input.value.trim(), drunkNumber: Number(number.input.value), drinkingPlan: plan.opener.value });
+      if (result === 'NAME_TAKEN') {
+        nameError.textContent = 'That name is already taken. Choose another name.';
+        nameError.hidden = false;
+        name.input.setAttribute('aria-invalid', 'true');
+        name.input.setAttribute('aria-describedby', nameError.id);
+        update();
+        name.input.focus();
+      }
     });
     const fields = element('div', 'form-fields');
     fields.append(element('p', 'join-intro', 'Before you get to the Saloon, we need to know a few things about you:'), name.wrapper, number.wrapper, plan.wrapper);
@@ -873,9 +899,7 @@ function renderScreen(app, state, dispatch) {
     currentSelect.dispatchEvent(new Event('change'));
   }
   const previousDrink = app.firstElementChild?.dataset.drinkId;
-  const keepSpyDialog = state.screen === 'spy' && app.querySelector('#spy-logged[open]');
   app.replaceChildren(shell);
-  if (keepSpyDialog) shell.querySelector('#spy-logged')?.showModal();
   if (state.screen === 'drink' && previousDrink !== state.drink.id) content.querySelector('h2').focus();
   if (previousScreen === 'drink' && state.screen === 'S07') brand.focus();
   if (shell.dataset.taskStep && previousTaskStep !== shell.dataset.taskStep) {

@@ -1,5 +1,5 @@
-import { applyTheme, createIntro, createScreenRenderer, formatTime, createNavigation } from './screens.js';
-import { act, tick, createScenario, acceptsPassword, remainingSeconds } from './scenario.js';
+import { applyTheme, createIntro, createScreenRenderer, createNavigation } from './screens.js';
+import { act, tick, createScenario, acceptsPassword } from './scenario.js';
 
 applyTheme();
 const app = document.getElementById('app');
@@ -10,15 +10,15 @@ try { savedEntry = sessionStorage.getItem(sessionKey); } catch {}
 const requestedTeam = new URLSearchParams(location.search).get('team');
 const initialTeam = requestedTeam ?? savedEntry;
 let state = {
-  screen: 'S00', sampleTeam: initialTeam === 'community' ? 'community' : 'mafia',
-  unlocked: ['yes', 'mafia', 'community'].includes(savedEntry),
+  screen: 'S00', sampleTeam: initialTeam === 'townsfolk' ? 'townsfolk' : 'outlaws',
+  unlocked: ['yes', 'outlaws', 'townsfolk'].includes(savedEntry),
 };
 const navigation = createNavigation();
 const renderPlayer = createScreenRenderer(app, dispatch);
 
 function render() {
   const { sampleChecks, taskQueue, finishOrder, ...view } = state;
-  renderPlayer(intro.view(navigation.view(view)), remainingSeconds(state, performance.now()));
+  renderPlayer(intro.view(navigation.view(view)));
 }
 
 function dispatch(action) {
@@ -58,6 +58,4 @@ setInterval(() => {
   const now = performance.now();
   const next = tick(state, now);
   if (next !== state) { state = next; render(); }
-  const timer = app.querySelector('[role="timer"]');
-  if (timer) timer.textContent = formatTime(remainingSeconds(state, now));
 }, 100);

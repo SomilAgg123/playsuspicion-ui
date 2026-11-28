@@ -12,7 +12,7 @@ const discussionPages = {
 
 function canOpenDiscussionPage(state, page) {
   return state.screen === 'S07' && state.discussion && Object.hasOwn(discussionPages, page)
-    && (page !== 'death-report' || state.information.team === 'Community');
+    && (page !== 'death-report' || state.information.team === 'Townsfolk');
 }
 
 function element(tag, className, text) {
@@ -235,9 +235,8 @@ export function createIntro() {
       return state.screen === 'S01' && screen ? { screen } : state;
     },
     advance(action) {
-      if (action === 'play' && screen === 'welcome') screen = 'game-info';
-      else if (action === 'continue' && screen === 'game-info') screen = null;
-      else return false;
+      if (action !== 'play' || screen !== 'welcome') return false;
+      screen = null;
       return true;
     },
   };
@@ -251,13 +250,13 @@ export function createScreenRenderer(app, dispatch) {
   const checksButton = button('', () => dispatch({ type: 'drink-checks' }), { variant: 'secondary' });
   checksButton.dataset.drinkChecks = '';
 
-  return (state, seconds, force = false) => {
+  return (state, force = false) => {
     const { drinkChecks, openDrinkCheck, ...page } = state;
     if (openDrinkCheck) {
       if (!displayedCheck) returnScreen = app.firstElementChild;
       const checkSignature = JSON.stringify(openDrinkCheck);
       if (checkSignature !== displayedCheck || force) {
-        renderScreen(app, { ...page, screen: 'drink', drink: openDrinkCheck, page: 'drink-checks' }, dispatch, seconds);
+        renderScreen(app, { ...page, screen: 'drink', drink: openDrinkCheck, page: 'drink-checks' }, dispatch);
       }
       displayedCheck = checkSignature;
       return;
@@ -265,7 +264,7 @@ export function createScreenRenderer(app, dispatch) {
 
     const signature = JSON.stringify(page);
     if (returnScreen) app.replaceChildren(returnScreen);
-    if (signature !== pageSignature || force) renderScreen(app, page, dispatch, seconds);
+    if (signature !== pageSignature || force) renderScreen(app, page, dispatch);
     pageSignature = signature;
     const shell = app.firstElementChild;
     if (drinkChecks) {
@@ -282,7 +281,7 @@ export function createScreenRenderer(app, dispatch) {
   };
 }
 
-function renderScreen(app, state, dispatch, seconds) {
+function renderScreen(app, state, dispatch) {
   const shell = element('section', 'game-shell');
   shell.dataset.screen = state.screen;
   shell.setAttribute('aria-label', 'Game screen');
@@ -360,11 +359,11 @@ function renderScreen(app, state, dispatch, seconds) {
     });
     const fields = element('div', 'form-fields');
     if (!state.unlocked) fields.append(password.wrapper);
-    const team = element('fieldset', 'buddy-list');
+    const team = element('fieldset', 'team-fieldset');
     team.append(element('legend', '', 'Enter as'));
-    const options = element('div', 'player-list');
-    for (const label of ['Mafia', 'Community']) {
-      const choice = element('label', 'buddy-choice');
+    const options = element('div', 'team-options');
+    for (const label of ['Outlaws', 'Townsfolk']) {
+      const choice = element('label', 'team-choice');
       const input = element('input');
       const value = label.toLowerCase();
       Object.assign(input, { type: 'radio', name: 'team', value, checked: value === state.sampleTeam });
@@ -396,7 +395,7 @@ function renderScreen(app, state, dispatch, seconds) {
       if (!next.disabled) dispatch({ type: 'join', name: name.input.value.trim(), drunkNumber: Number(number.input.value), drinkingPlan: plan.opener.value });
     });
     const fields = element('div', 'form-fields');
-    fields.append(name.wrapper, number.wrapper, plan.wrapper);
+    fields.append(element('p', 'join-intro', 'Before you get to the Saloon, we need to know a few things about you:'), name.wrapper, number.wrapper, plan.wrapper);
     content.append(fields, next);
     update();
   }
@@ -405,7 +404,7 @@ function renderScreen(app, state, dispatch, seconds) {
     const brief = element('div', 'game-brief role-briefing');
     const heading = element('h2', 'screen-statement matchup');
     heading.tabIndex = -1;
-    heading.append('Mafia ', element('span', 'matchup-versus', 'vs.'), ' Community');
+    heading.append('Outlaws ', element('span', 'matchup-versus', 'vs.'), ' Townsfolk');
     const list = element('ol', 'briefing-goals');
     list.append(
       element('li', '', 'Help your team win by getting your team members to the end'),
@@ -427,13 +426,13 @@ function renderScreen(app, state, dispatch, seconds) {
     list.tabIndex = 0;
     list.setAttribute('role', 'region');
     list.setAttribute('aria-label', 'Role information');
-    const teamGoal = info.team === 'Mafia'
-      ? 'Keep at least one mafia member alive when the final roundtable ends.'
-      : 'Eliminate every mafia member before ending the final roundtable.';
+    const teamGoal = info.team === 'Outlaws'
+      ? 'Keep at least one Outlaw alive when the final roundtable ends.'
+      : 'Eliminate every Outlaw before ending the final roundtable.';
     const role = roles[info.role];
     list.append(assignmentCard('Team', info.team, teamGoal),
       assignmentCard('Role', info.role, role?.character, info.roleTask ?? formatRoleTask(info.role)));
-    if (info.otherMafia) list.append(assignmentCard('Other mafia', String(info.otherMafia.length), ...info.otherMafia));
+    if (info.otherOutlaws) list.append(assignmentCard('Other Outlaws', String(info.otherOutlaws.length), ...info.otherOutlaws));
     list.append(missionCard(info));
     content.append(list);
   }
@@ -447,51 +446,6 @@ function renderScreen(app, state, dispatch, seconds) {
     content.append(element('p', 'arrival-description screen-statement', 'Press this button once you’ve arrived at the rendezvous point.'), arrived);
   }
 
-  if (state.screen === 'S04') {
-    const list = element('fieldset', 'buddy-list');
-    list.setAttribute('aria-busy', String(Boolean(state.selectedBuddyId)));
-    list.append(element('legend', state.selectedBuddyId ? 'waiting-indicator' : '', 'Buddy'));
-    const players = element('div', 'player-list');
-    state.buddies.forEach(buddy => {
-      const choice = element('label', 'buddy-choice');
-      const input = element('input');
-      Object.assign(input, { type: 'radio', name: 'buddy', value: buddy.id, checked: state.selectedBuddyId === buddy.id, disabled: Boolean(state.selectedBuddyId) });
-      input.addEventListener('change', () => dispatch({ type: 'buddy', playerId: buddy.id }));
-      choice.append(input, element('span', 'player-name', buddy.name));
-      players.append(choice);
-    });
-    list.append(players);
-    content.append(list);
-  }
-
-  if (state.screen === 'S05') {
-    content.classList.add('mic-content');
-    const details = element('div', 'mic-details');
-    const mic = element('span', 'mic-icon');
-    mic.setAttribute('aria-hidden', 'true');
-    const emblem = element('span', 'mic-emblem');
-    emblem.setAttribute('aria-hidden', 'true');
-    emblem.append(mic);
-    const speaker = element('p', 'mic-name', state.mic.speaker);
-    speaker.setAttribute('aria-live', 'polite');
-    const timer = element('p', 'mic-timer', formatTime(seconds));
-    timer.setAttribute('role', 'timer');
-    timer.setAttribute('aria-label', 'Time remaining');
-    const pair = element('div', 'mic-pair');
-    pair.append(speaker, element('p', 'mic-selected', 'selected'), element('p', 'mic-name', state.mic.buddy));
-    details.append(emblem, pair, timer);
-    content.append(details);
-    const actions = element('div', 'mic-actions');
-    if (state.mic.canFinish) {
-      const done = button('Done', () => dispatch({ type: 'done', turnId: state.mic.turnId }));
-      done.dataset.action = 'done';
-      done.disabled = seconds === 0;
-      actions.append(done);
-    }
-    actions.append(button('Skip', () => dispatch({ type: 'skip' }), { variant: 'secondary' }));
-    content.append(actions);
-  }
-
   if (state.screen === 'mission-briefing') {
     const brief = element('div', 'game-brief mission-briefing');
     const heading = element('h2', 'screen-statement', 'Let the suspicion commence.');
@@ -500,6 +454,8 @@ function renderScreen(app, state, dispatch, seconds) {
       element('p', '', 'Tonight, you’ll observe another player. They’ll ask you to confirm when they’ve completed their secret mission. You have an observer of your own.'),
       element('p', '', 'You’re also spying on someone. Watch what they do. Log your guess during discussion. You can change it until the final roundtable, when a correct guess eliminates your target.'));
     const reveal = button('Reveal my missions', () => revealPaper(app, () => dispatch({ type: 'reveal-missions' }), 'S06'));
+    reveal.disabled = !state.canRevealMissions;
+    reveal.setAttribute('aria-busy', String(!state.canRevealMissions));
     reveal.classList.add('screen-action');
     content.append(brief, reveal);
   }
@@ -603,13 +559,13 @@ function renderScreen(app, state, dispatch, seconds) {
   if (previousScreen === state.screen && Object.hasOwn(discussionPages, state.screen)) {
     content.querySelector('[role="status"]')?.focus();
   }
-  if ((previousScreen === 'welcome' && state.screen === 'game-info') ||
-      (previousScreen === 'S01' && state.screen === 'role-briefing')) content.querySelector('h2').focus();
+  if ((previousScreen === 'S01' && state.screen === 'game-info') ||
+      (previousScreen === 'game-info' && state.screen === 'role-briefing')) content.querySelector('h2').focus();
   if (previousScreen !== state.screen && state.screen === 'mission-briefing') content.querySelector('h2').focus();
   if ((previousScreen === 'role-briefing' && state.screen === 'S02') ||
       (previousScreen === 'mission-briefing' && state.screen === 'S06') ||
       (previousScreen === 'S06' && state.screen === 'S07')) brand.focus();
-  if (previousScreen === 'game-info' && state.screen === 'S01') brand.focus();
+  if (previousScreen === 'welcome' && state.screen === 'S01') brand.focus();
   if (roleScroll && state.screen === 'S02') shell.querySelector('.role-details').scrollTop = roleScroll;
 }
 
@@ -655,7 +611,6 @@ export function createNavigation() {
   };
 }
 
-export function formatTime(seconds) { return `00:${String(seconds).padStart(2, '0')}`; }
 
 export function applyTheme() {
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content',

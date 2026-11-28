@@ -3,39 +3,26 @@ import { defaultTaskTriggerBudget, taskTriggerMilestone, needsTaskPartner, taskP
 import { canBeEnabler } from './roles.js';
 import { drawEventDrinks, taskDrinkAssignments } from './drinking-plans.js';
 
-export const TURN_MS = 15_000;
 const names = ['Priya', 'Sam', 'Chad', 'Maya', 'Jordan', 'Bea'];
 
-export function createScenario(team = 'mafia') {
+export function createScenario(team = 'outlaws') {
   return {
     screen: 'S01', canJoin: true, canViewRole: false, player: { name: '', drunkNumber: null },
     information: {
-      ...(team === 'community' ? { team: 'Community', role: 'Socrates' } :
-        { team: 'Mafia', role: 'Hired Gun', otherMafia: ['Priya (Mastermind)', 'Sam'] }),
+      ...(team === 'townsfolk' ? { team: 'Townsfolk', role: 'Socrates' } :
+        { team: 'Outlaws', role: 'Hired Gun', otherOutlaws: ['Priya (Mastermind)', 'Sam'] }),
       mission: 'Get Chad to say "monster mash"',
     },
-    buddies: names.map((name, index) => ({ id: `sample-${index}`, name })),
-    arrived: false, selectedBuddyId: null, turnIndex: 0,
+    otherPlayers: names.map((name, index) => ({ id: `sample-${index}`, name })),
+    arrived: false,
   };
 }
 
-export function acceptsPassword(value) { return typeof value === 'string' && value.trim().toLowerCase() === 'mafia'; }
-
-function finishMic(state) { return { ...state, screen: 'mission-briefing', mic: null }; }
-
-function withTurn(state, index, startsAt) {
-  if (index >= state.turns.length) return finishMic(state);
-  const turn = state.turns[index];
-  return {
-    ...state, screen: 'S05', turnIndex: index,
-    mic: { ...turn, turnId: `sample-turn-${index}`, canFinish: index === 0, endsAt: startsAt + TURN_MS },
-  };
-}
+export function acceptsPassword(value) { return typeof value === 'string' && value.trim().toLowerCase() === 'outlaws'; }
 
 export function tick(state, now) {
-  if (state.screen === 'S03' && state.arrived && now >= state.transitionAt) return { ...state, screen: 'S04' };
-  while (state.screen === 'S05' && now >= state.mic.endsAt) {
-    state = withTurn(state, state.turnIndex + 1, state.mic.endsAt);
+  if (state.screen === 'mission-briefing' && !state.canRevealMissions && now >= state.transitionAt) {
+    return { ...state, canRevealMissions: true };
   }
   if (state.screen === 'S07' && state.taskDueAt != null && now >= state.taskDueAt) {
     return { ...state, screen: 'task-event', taskDueAt: undefined, taskStartedAt: now, finishOrder: [],
@@ -47,7 +34,7 @@ export function tick(state, now) {
       return { ...state, screen: 'S07', task: undefined, transitionAt: undefined };
     }
     if (['ready', 'waiting'].includes(state.task.stage)) {
-      const bots = [...state.buddies].sort((a, b) => Number(a.name === state.missions.observes) - Number(b.name === state.missions.observes));
+      const bots = [...state.otherPlayers].sort((a, b) => Number(a.name === state.missions.observes) - Number(b.name === state.missions.observes));
       const due = bots.filter((bot, index) => now >= state.taskStartedAt + (index + 1) * 400 && !state.finishOrder.includes(bot.id));
       if (due.length) return sampleFinish(state, due.map(bot => bot.id));
     }
@@ -62,23 +49,15 @@ export function act(current, action, now, randomInt = max => Math.floor(Math.ran
     if (!name || name.length > 120 || !Number.isFinite(action.drunkNumber) || action.drunkNumber < 0) return state;
     const information = canBeEnabler(state.information.team, action.drinkingPlan)
       ? { ...state.information, role: 'The Enabler' } : state.information;
-    return { ...state, screen: 'role-briefing', information, player: { name, drunkNumber: action.drunkNumber, drinkingPlan: action.drinkingPlan ?? null } };
+    return { ...state, screen: 'game-info', information, player: { name, drunkNumber: action.drunkNumber, drinkingPlan: action.drinkingPlan ?? null } };
   }
+  if (action.type === 'continue' && state.screen === 'game-info') return { ...state, screen: 'role-briefing' };
   if (action.type === 'reveal-role' && state.screen === 'role-briefing') return { ...state, screen: 'S02' };
   if (action.type === 'next' && state.screen === 'S02') return { ...state, screen: 'S03', canViewRole: true };
   if (action.type === 'arrive' && state.screen === 'S03' && !state.arrived) {
-    return { ...state, arrived: true, transitionAt: now + 600 };
+    return { ...state, screen: 'mission-briefing', arrived: true, canRevealMissions: false, transitionAt: now + 600 };
   }
-  if (action.type === 'buddy' && state.screen === 'S04') {
-    const selected = state.buddies.find(buddy => buddy.id === action.playerId);
-    if (!selected) return state;
-    const turns = [
-      { speaker: state.player.name, buddy: selected.name },
-      ...state.buddies.map((buddy, index) => ({ speaker: buddy.name, buddy: state.buddies[index + 1]?.name ?? state.player.name })),
-    ];
-    return withTurn({ ...state, selectedBuddyId: selected.id, turns }, 0, now);
-  }
-  if (action.type === 'reveal-missions' && state.screen === 'mission-briefing') {
+  if (action.type === 'reveal-missions' && state.screen === 'mission-briefing' && state.canRevealMissions) {
     return { ...state, screen: 'S06', missions: { observer: 'Maya', observes: 'Jordan', spiesOn: 'Bea' } };
   }
   if (action.type === 'finish-missions' && state.screen === 'S06') {
@@ -103,7 +82,7 @@ export function act(current, action, now, randomInt = max => Math.floor(Math.ran
   }
   if (state.screen === 'S07' && state.discussion) {
     const details = state.discussion;
-    if (action.type === 'report-death' && state.information.team === 'Community' && !state.dead) {
+    if (action.type === 'report-death' && state.information.team === 'Townsfolk' && !state.dead) {
       return sampleTrigger({ ...state, dead: true }, now, randomInt);
     }
     if (action.type === 'confirm-observation' && !details.observationConfirmed) {
@@ -115,26 +94,22 @@ export function act(current, action, now, randomInt = max => Math.floor(Math.ran
       return details.spyGuess == null ? sampleTrigger(next, now, randomInt) : next;
     }
   }
-  if (action.type === 'skip' && state.screen === 'S05') return finishMic(state);
-  if (action.type === 'done' && state.screen === 'S05' && state.mic.canFinish && action.turnId === state.mic.turnId) {
-    return withTurn(state, state.turnIndex + 1, now);
-  }
   return state;
 }
 
 function sampleRoster(state) {
   return [
     { ...state.player, id: 'self', joined: true },
-    ...state.buddies.map(buddy => ({ ...buddy, joined: true, drunkNumber: 4, drinkingPlan: 'buzz' })),
+    ...state.otherPlayers.map(player => ({ ...player, joined: true, drunkNumber: 4, drinkingPlan: 'buzz' })),
   ];
 }
 
 function sampleFinish(state, ids) {
   const finishOrder = [...state.finishOrder, ...ids];
   const next = { ...state, finishOrder, task: { ...state.task, stage: finishOrder.includes('self') ? 'waiting' : 'ready' } };
-  if (finishOrder.length < state.buddies.length + 1) return next;
+  if (finishOrder.length < state.otherPlayers.length + 1) return next;
   if (needsTaskPartner(state.task.key, finishOrder.length)) {
-    if (finishOrder.at(-1) === 'self') return { ...next, task: { ...next.task, stage: 'partner', players: state.buddies } };
+    if (finishOrder.at(-1) === 'self') return { ...next, task: { ...next.task, stage: 'partner', players: state.otherPlayers } };
     return sampleResults(next, finishOrder[0]);
   }
   return sampleResults(next);
@@ -166,7 +141,7 @@ function deliverDrinks(state, drinks) {
 
 function sampleTrigger(state, now, randomInt) {
   const players = sampleRoster(state);
-  const observed = state.buddies.find(buddy => buddy.name === state.missions.observes);
+  const observed = state.otherPlayers.find(player => player.name === state.missions.observes);
   const triggerCount = (state.triggerCount ?? 0) + 1;
   const sampleQueue = drawEventDrinks(players, randomInt).flatMap(({ playerId, amount }) => {
     if (playerId === 'self') return [{ id: `sample-own-${triggerCount}`, amount }];
@@ -177,8 +152,4 @@ function sampleTrigger(state, now, randomInt) {
   // The seven-person preview demonstrates the first of the twelve milestones.
   const taskDueAt = triggerCount === taskTriggerMilestone(1, defaultTaskTriggerBudget(players.length)) ? now + 1500 : state.taskDueAt;
   return deliverDrinks({ ...state, triggerCount, taskDueAt }, sampleQueue);
-}
-
-export function remainingSeconds(state, now) {
-  return state.mic?.endsAt == null ? 0 : Math.max(0, Math.ceil((state.mic.endsAt - now) / 1000));
 }

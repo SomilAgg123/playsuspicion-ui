@@ -107,24 +107,28 @@ function missionCard(info) {
   return card;
 }
 
-function nightVoteScreen(content, vote, dispatch) {
+function ballotScreen(content, vote, dispatch) {
   content.classList.add('discussion-content', 'vote-content');
-  const heading = element('h2', 'screen-statement', 'Town Vote');
-  const timer = element('span', 'vote-timer');
-  timer.setAttribute('role', 'timer');
-  const clock = element('p', 'vote-clock', 'Closes in ');
-  clock.append(timer);
-  content.append(heading, clock);
+  const circle = vote.kind === 'circle';
+  const titleText = circle ? 'Is everyone here Townsfolk?' : vote.kind === 'eliminate' ? 'Who do you vote out?' : 'Town Vote';
+  content.append(element('h2', 'screen-statement', titleText));
+  if (vote.endsAt != null) {
+    const timer = element('span', 'vote-timer');
+    timer.setAttribute('role', 'timer');
+    const clock = element('p', 'vote-clock', 'Closes in ');
+    clock.append(timer);
+    content.append(clock);
+  }
   const submit = targetId => dispatch({ type: 'cast-vote', voteId: vote.id, targetId });
   const status = element('p');
   status.setAttribute('role', 'status');
   if (vote.returned) {
     status.textContent = 'Your vote is sealed.';
   } else if (vote.canVote) {
-    const field = element('label', 'game-field', 'Who do you suspect?');
+    const field = element('label', 'game-field', circle ? 'Your verdict' : 'Who do you suspect?');
     const select = element('select');
     select.required = true;
-    const prompt = new Option('Choose a player', '');
+    const prompt = new Option(circle ? 'Choose a verdict' : 'Choose a player', '');
     prompt.disabled = true;
     select.append(prompt);
     for (const member of vote.candidates) {
@@ -157,7 +161,14 @@ function nightVoteScreen(content, vote, dispatch) {
 
 function voteResultsScreen(content, result, dispatch) {
   content.classList.add('discussion-content', 'vote-content');
-  content.append(element('h2', 'screen-statement', 'Town Vote results'));
+  const next = button('Continue', () => dispatch({ type: 'acknowledge-vote-result', voteId: result.id }));
+  if (result.kind === 'circle') {
+    content.append(element('h2', 'screen-statement', 'The circle has spoken'),
+      namedList(result.choices.map(({ name, choice }) => [name, choice])), next);
+    return;
+  }
+  content.append(element('h2', 'screen-statement', result.kind ? 'Elimination vote' : 'Town Vote results'));
+  if (result.kind && !result.eliminatedName) content.append(element('p', 'vote-clock', 'No majority. Vote again.'));
   if (result.eliminatedName) {
     const verdict = element('p', 'vote-verdict');
     verdict.append(element('strong', '', result.eliminatedName), ' has been voted out.');
@@ -184,7 +195,52 @@ function voteResultsScreen(content, result, dispatch) {
   } else {
     content.append(element('p', '', 'No votes were cast.'));
   }
-  content.append(button('Continue', () => dispatch({ type: 'acknowledge-vote-result', voteId: result.id })));
+  content.append(next);
+}
+
+function namedList(entries) {
+  const list = element('ul', 'showdown-list');
+  for (const [name, value] of entries) {
+    const row = element('li');
+    row.append(element('strong', '', name), element('span', '', value));
+    list.append(row);
+  }
+  return list;
+}
+
+function showdownScreen(content, state, dispatch) {
+  content.classList.add('discussion-content', 'showdown-content');
+  const heading = text => element('h2', 'screen-statement', text);
+  const advance = step => button('Continue', () => dispatch({ type: 'showdown-continue', step }));
+  if (state.screen === 'showdown-announcement') {
+    content.append(heading('It’s time for the Saloon Showdown.'), advance('announcement'));
+  } else if (state.screen === 'showdown-eligibility') {
+    const reasons = { killed: 'You were killed.', 'voted-out': 'You were voted out.',
+      mission: 'Your secret mission wasn’t confirmed.', spy: 'Your spy guessed your secret mission.' };
+    content.append(heading(state.reasons.length ? 'You’re out.' : 'You made it to the Showdown.'));
+    for (const reason of state.reasons) content.append(element('p', '', reasons[reason]));
+    if (state.spyResult) {
+      const { target, correct } = state.spyResult;
+      content.append(element('p', '', correct ? `You guessed ${target}’s mission correctly.` : `Your guess for ${target} was incorrect.`));
+    }
+    const rules = element('ol', 'showdown-rules');
+    for (const rule of [
+      'Finalists vote on whether everyone in the circle is Townsfolk. Then everyone sees each verdict.',
+      'One Outlaw call opens an elimination vote. Vote again until someone gets more than half the votes.',
+      'The remaining circle votes again. Unanimous Townsfolk or two remaining finalists ends the game.',
+      'If any Outlaw remains, the Outlaws win. Otherwise the Townsfolk win.',
+    ]) rules.append(element('li', '', rule));
+    content.append(element('h3', 'section-title', 'How it works'), rules, advance('eligibility'));
+  } else if (state.screen === 'showdown-team') {
+    content.append(heading(state.canChoose ? 'Choose your final team' : 'The circle is gathering.'));
+    if (state.canChoose) {
+      for (const team of ['Outlaws', 'Townsfolk']) content.append(button(team, () => dispatch({ type: 'choose-final-team', team })));
+    }
+  } else if (state.screen === 'showdown-end') {
+    content.append(heading(`${state.outcome.winner} win!`), element('h3', 'section-title', 'The final circle'));
+    if (state.outcome.circle.length) content.append(namedList(state.outcome.circle.map(p => [p.name, p.team])));
+    else content.append(element('p', '', 'No one made it to the final circle.'));
+  }
 }
 
 function updateRollCall(shell, roster) {
@@ -402,7 +458,8 @@ export function createScreenRenderer(app, dispatch) {
     const shell = app.firstElementChild;
     if (state.screen === 'night-vote') {
       updateRollCall(shell, state.vote.roster);
-      shell.querySelector('.vote-timer').textContent = formatTime(seconds);
+      const timer = shell.querySelector('.vote-timer');
+      if (timer) timer.textContent = formatTime(seconds);
     }
     renderKillTask(shell, killTask, dispatch, seconds);
     if (observerChecks) {
@@ -615,7 +672,7 @@ function renderScreen(app, state, dispatch) {
   }
 
   if (state.screen === 'vote-results') voteResultsScreen(content, state.voteResult, dispatch);
-  if (state.screen === 'night-vote') nightVoteScreen(content, state.vote, dispatch);
+  if (state.screen === 'night-vote') ballotScreen(content, state.vote, dispatch);
   if (state.screen === 'task-event') taskScreen(content, state, dispatch);
   if (state.screen === 'S07') {
     content.classList.add('discussion-content');
@@ -638,18 +695,8 @@ function renderScreen(app, state, dispatch) {
     }
   }
   if (Object.hasOwn(discussionPages, state.screen)) discussionForm(app, content, state, dispatch);
-  if (state.screen === 'final-roundtable') {
-    content.classList.add('discussion-content');
-    content.append(element('h2', 'screen-statement', 'Final roundtable'));
-    const result = state.spyResult;
-    if (result) {
-      content.append(assignmentCard(`Your guess for ${result.target}`, missions[result.missionIndex]('someone')),
-        element('p', '', result.correct ? `Correct guess. ${result.target} has been eliminated.` : 'Incorrect guess.'));
-    } else {
-      content.append(element('p', '', 'You didn’t log a spy guess.'));
-    }
-    if (state.dead) content.append(element('p', '', state.votedOut ? 'You were voted out.' : "You've been killed."));
-  }
+  if (state.screen.startsWith('showdown-')) showdownScreen(content, state, dispatch);
+  if (state.pendingDrink && !state.page) content.append(button('View my drink', () => dispatch({ type: 'open-drink' }), { variant: 'secondary' }));
 
   if (state.screen === 'mission-check') {
     const { id, playerName, mission } = state.check;
@@ -675,7 +722,7 @@ function renderScreen(app, state, dispatch) {
     content.append(title, card,
       button(playerName ? `I saw ${playerName} drink it` : 'I drank this amount',
         () => dispatch(playerName ? { type: 'verify-check', checkId: id } : { type: 'report-drink', drinkId: id })), status);
-    if (state.page === 'observer-checks') {
+    if (state.page === 'observer-checks' || state.page === 'open-drink') {
       content.append(button('Back', () => dispatch({ type: 'back' }), { variant: 'secondary' }));
     }
   }
@@ -731,10 +778,17 @@ export function createNavigation() {
   let lastTaskStep;
   let lastDrinkId;
   let lastVoteId;
+  let lastShowdownScreen = null;
   return {
     view(state) {
       const step = state.task && [state.task.key, state.task.stage].join('/');
       const voteId = state.vote?.id ?? (state.voteResult && state.voteResult.id + '/results');
+      const showdownScreen = state.screen.startsWith('showdown-') ? state.screen : null;
+      if (showdownScreen !== lastShowdownScreen) {
+        page = null;
+        checkId = null;
+        lastShowdownScreen = showdownScreen;
+      }
       if (voteId !== lastVoteId) {
         page = null;
         checkId = null;
@@ -747,6 +801,7 @@ export function createNavigation() {
       lastTaskStep = step;
       if (checkId && state.observerChecks?.next.id === checkId) return { ...state, openObserverCheck: state.observerChecks.next };
       checkId = null;
+      if (page === 'open-drink' && state.pendingDrink) return { ...state, screen: 'drink', drink: state.pendingDrink, page };
       if (page === 'role' && state.canViewRole) return { ...state, screen: 'S02', page };
       if (page === 'missions' && state.missions && state.screen !== 'S06') return { ...state, screen: 'S06', page };
       if (canOpenDiscussionPage(state, page)) return { ...state, screen: page, page };
@@ -764,6 +819,7 @@ export function createNavigation() {
       }
       const previous = page;
       if (action === 'back' && page) page = null;
+      else if (action === 'open-drink' && state.pendingDrink) page = action;
       else if (action === 'role' && state.canViewRole) page = page === action ? null : action;
       else if (action === 'missions' && state.missions) page = page === action || state.screen === 'S06' ? null : action;
       else if (canOpenDiscussionPage(state, action)) page = action;

@@ -823,3 +823,28 @@ body { background: var(--background-room); color: var(--color-text); font-weight
   font-display: swap;
   src: url(assets/fonts/montagu-slab-700.ttf) format('truetype');
 }
+
+.showdown-content .screen-statement { text-align: center; text-wrap: balance; }
+.game-shell:is([data-screen="showdown-announcement"], [data-screen="showdown-end"]) .showdown-content::before {
+  content: "";
+  display: block;
+  width: min(100%, var(--saloon-table-width));
+  aspect-ratio: 3 / 2;
+  align-self: center;
+  background: url('assets/showdown.webp') center / contain no-repeat;
+  mix-blend-mode: multiply;
+}
+.game-shell[data-screen="showdown-announcement"] .showdown-content::before {
+  animation: showdown-arrival var(--poster-welcome-fall) var(--ease-standard) both;
+}
+@keyframes showdown-arrival {
+  from { opacity: 0; transform: scale(1.12); }
+  to { opacity: 1; transform: scale(1); }
+}
+.game-shell[data-screen="showdown-end"] .showdown-content::before { background-image: url('assets/final-circle.webp'); }
+.showdown-list, .showdown-rules { margin: 0; }
+.showdown-rules { padding-inline-start: var(--space-6); }
+.showdown-rules li + li { margin-top: var(--space-2); }
+.showdown-list { padding: 0; list-style: none; }
+.showdown-list li { display: flex; justify-content: space-between; gap: var(--space-3); padding-block: var(--space-2); border-bottom: var(--stroke-thin) solid var(--color-border); overflow-wrap: anywhere; }
+.showdown-list li span { text-align: end; }

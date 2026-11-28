@@ -25,6 +25,9 @@ export function tick(state, now, randomInt = max => Math.floor(Math.random() * m
   if (state.screen === 'mission-briefing' && !state.canRevealMissions && now >= state.transitionAt) {
     return { ...state, canRevealMissions: true };
   }
+  if (state.screen === 'S07' && !state.killTask && now >= state.showdownAt) {
+    return withChecks({ ...state, screen: 'showdown-announcement' }, (state.sampleChecks ?? []).filter(check => check.kind !== 'mission'));
+  }
   if (state.screen === 'S07' && now >= state.missionConfirmationAt) {
     const next = { ...state, missionConfirmationAt: undefined, discussion: { ...state.discussion, missionObserver: null },
       information: { ...state.information, missionConfirmed: true } };
@@ -38,6 +41,10 @@ export function tick(state, now, randomInt = max => Math.floor(Math.random() * m
     const roster = sampleRoster(state).filter(member => member.id !== 'self' || !state.dead).map(({ id, name }) => ({ id, name, returned: false }));
     return { ...state, screen: 'night-vote', voteDueAt: undefined, voteStartedAt: now,
       vote: { id: 'sample-vote', selfId: 'self', canVote: !state.dead, candidates: state.dead ? [] : state.otherPlayers, endsAt: now + 120_000, roster } };
+  }
+  if (state.screen === 'night-vote' && state.vote.kind) {
+    if (!state.vote.canVote && now >= state.voteStartedAt + 2000) return sampleVerdict(state);
+    return state;
   }
   if (state.screen === 'night-vote') {
     const vote = state.vote;
@@ -76,6 +83,28 @@ export function tick(state, now, randomInt = max => Math.floor(Math.random() * m
 
 export function act(current, action, now, randomInt = max => Math.floor(Math.random() * max)) {
   const state = tick(current, now, randomInt);
+  if (action.type === 'showdown-continue' && state.screen === 'showdown-announcement' && action.step === 'announcement') {
+    const reasons = [];
+    if (state.dead) reasons.push(state.votedOut ? 'voted-out' : 'killed');
+    if (!state.information.missionConfirmed) reasons.push('mission');
+    const bots = state.otherPlayers.slice(0, reasons.length ? 3 : 2);
+    const circle = bots.map((p, index) => ({ ...p, team: index === 0 ? 'Outlaws' : 'Townsfolk' }));
+    if (!reasons.length) circle.unshift({ id: 'self', name: state.player.name, team: state.information.team });
+    const guess = state.discussion?.spyGuess;
+    return { ...state, screen: 'showdown-eligibility', reasons, sampleCircle: circle,
+      spyResult: guess == null ? null : { target: state.missions.spiesOn, correct: guess === 0 } };
+  }
+  if (action.type === 'showdown-continue' && state.screen === 'showdown-eligibility' && action.step === 'eligibility') {
+    return sampleBallot(state, 'circle', now);
+  }
+  if (state.vote?.kind && action.type === 'cast-vote' && action.voteId === state.vote.id && state.vote.canVote
+      && state.vote.candidates.some(p => p.id === action.targetId)) return sampleVerdict(state, action.targetId);
+  if (state.voteResult?.kind && action.type === 'acknowledge-vote-result' && action.voteId === state.voteResult.id) {
+    if (state.voteResult.kind === 'circle' && state.sampleContinue) return sampleBallot(state, 'eliminate', now);
+    const circle = state.sampleCircle.filter(p => p.id !== state.sampleEliminated);
+    return { ...state, screen: 'showdown-end', voteResult: undefined, outcome: { circle,
+      winner: circle.some(p => p.team === 'Outlaws') ? 'Outlaws' : 'Townsfolk' } };
+  }
   if (state.screen === 'vote-results' && action.type === 'acknowledge-vote-result' && action.voteId === state.voteResult.id) {
     const [drink, ...pendingDrinks] = state.pendingDrinks ?? [];
     return { ...state, screen: drink ? 'drink' : 'S07', drink, pendingDrinks, voteResult: undefined };
@@ -107,7 +136,7 @@ export function act(current, action, now, randomInt = max => Math.floor(Math.ran
   }
   if (action.type === 'finish-missions' && state.screen === 'S06') {
     const sampleReport = { kind: 'mission', id: 'sample-mission', playerName: 'Jordan', mission: 'Give Sam a hug' };
-    return withChecks({ ...state, screen: 'S07', discussion: { missionObserver: null, spyGuess: null } }, [sampleReport]);
+    return withChecks({ ...state, screen: 'S07', showdownAt: now + 30 * 60_000, discussion: { missionObserver: null, spyGuess: null } }, [sampleReport]);
   }
   const check = state.observerChecks?.next;
   if (check && check.id === action.checkId && action.type === 'reject-check' && check.kind === 'mission') {
@@ -148,6 +177,31 @@ export function act(current, action, now, randomInt = max => Math.floor(Math.ran
     }
   }
   return state;
+}
+
+function sampleBallot(state, kind, now) {
+  const roster = state.sampleCircle.map(({ id, name }) => ({ id, name, returned: id !== 'self' }));
+  const candidates = kind === 'circle' ? [
+    { id: 'town', name: 'Everyone is Townsfolk' }, { id: 'outlaw', name: 'There’s an Outlaw' },
+  ] : roster.filter(p => p.id !== 'self');
+  return { ...state, screen: 'night-vote', voteStartedAt: now, voteResult: undefined,
+    vote: { id: 'sample-' + kind, kind, roster, selfId: 'self', canVote: roster.some(p => p.id === 'self'), candidates } };
+}
+
+function sampleVerdict(state, target) {
+  const { id, kind, roster } = state.vote;
+  if (kind === 'circle') {
+    const choices = roster.map((p, index) => ({
+      name: p.name, choice: (p.id === 'self' ? target === 'outlaw' : !state.vote.canVote && index === 0)
+        ? 'There’s an Outlaw' : 'Everyone is Townsfolk',
+    }));
+    return { ...state, screen: 'vote-results', vote: undefined, voteResult: { id, kind, choices },
+      sampleContinue: choices.some(p => p.choice === 'There’s an Outlaw') };
+  }
+  const out = roster.find(p => p.id === target) ?? roster[0];
+  const other = roster.find(p => p.id !== out.id);
+  return { ...state, screen: 'vote-results', vote: undefined, sampleEliminated: out.id,
+    voteResult: { kind, id, eliminatedName: out.name, standings: [{ name: out.name, votes: 2 }, { name: other.name, votes: 1 }] } };
 }
 
 function sampleRoster(state) {

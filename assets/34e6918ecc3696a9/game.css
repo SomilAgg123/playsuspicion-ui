@@ -258,14 +258,14 @@ body { background: var(--background-room); color: var(--color-text); font-weight
 .vote-standings thead th { color: var(--color-label); border-bottom: var(--stroke-strong) double var(--color-accent); }
 .vote-standings tr > :last-child { text-align: end; }
 .vote-ledger { margin-top: var(--space-4); }
-.vote-ledger :is(h3, li) { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-3); }
+.vote-ledger h3 { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-3); }
 .vote-ledger h3 { padding-bottom: var(--space-2); border-bottom: var(--stroke-strong) double var(--color-accent); }
-.vote-ledger ul { margin: 0; padding: 0; list-style: none; }
-.vote-ledger li { padding-block: var(--space-2); border-bottom: var(--stroke-thin) solid var(--color-border); }
-.vote-receipt { flex: none; display: inline-flex; align-items: center; gap: var(--space-2); color: var(--color-label); }
-.vote-receipt::before { content: ""; display: inline-grid; place-items: center; width: 1em; height: 1em; border: var(--stroke-thin) solid currentColor; }
+.vote-ledger ul { display: grid; grid-template-columns: minmax(0, 1fr) max-content; column-gap: var(--space-3); margin: 0; padding: 0; list-style: none; }
+.vote-ledger li { display: grid; grid-column: 1 / -1; grid-template-columns: subgrid; align-items: baseline; padding-block: var(--space-2); border-bottom: var(--stroke-thin) solid var(--color-border); }
+.vote-receipt { display: inline-flex; align-items: center; gap: var(--space-2); color: var(--color-label); }
+.vote-receipt::before { content: ""; box-sizing: border-box; flex: none; width: 1em; height: 1em; border: var(--stroke-thin) solid currentColor; }
 .vote-receipt[data-returned="true"] { color: var(--color-success); }
-.vote-receipt[data-returned="true"]::before { content: "✓" / ""; font-weight: var(--font-weight-strong); }
+.vote-receipt[data-returned="true"]::before { background-color: currentColor; }
 .game-shell[data-screen="drink"] .discussion-content::before {
   width: var(--large-screen-sketch-size);
   background-image: var(--whiskey-glass);
@@ -788,6 +788,7 @@ body { background: var(--background-room); color: var(--color-text); font-weight
   .game-button:active:not(:disabled) { transform: none; }
 }
 @media (forced-colors: active) {
+  .vote-receipt[data-returned="true"]::before { border-width: 0.5em; }
   .team-choice input { appearance: auto; }
   .team-choice input:checked::after { display: none; }
   .game-shell :focus-visible, .team-choice:has(input:focus-visible), .game-dialog :focus-visible { outline-color: Highlight; }

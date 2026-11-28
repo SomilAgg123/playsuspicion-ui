@@ -227,6 +227,26 @@ body { background: var(--background-room); color: var(--color-text); font-weight
   align-self: center;
   background: var(--cowboy-portrait) center / contain no-repeat;
 }
+.game-shell[data-screen="night-vote"] .vote-content::before {
+  content: "";
+  align-self: center;
+  width: var(--large-screen-sketch-size);
+  aspect-ratio: 3 / 2;
+  background: url('assets/ballot-hat.webp') center / contain no-repeat;
+  mix-blend-mode: multiply;
+}
+.vote-content { gap: var(--space-3); }
+.vote-content .screen-statement, .vote-clock { text-align: center; }
+.vote-clock, .vote-count { color: var(--color-label); font-variant-numeric: tabular-nums; }
+.vote-ledger { margin-top: var(--space-4); }
+.vote-ledger :is(h3, li) { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-3); }
+.vote-ledger h3 { padding-bottom: var(--space-2); border-bottom: var(--stroke-strong) double var(--color-accent); }
+.vote-ledger ul { margin: 0; padding: 0; list-style: none; }
+.vote-ledger li { padding-block: var(--space-2); border-bottom: var(--stroke-thin) solid var(--color-border); }
+.vote-receipt { flex: none; display: inline-flex; align-items: center; gap: var(--space-2); color: var(--color-label); }
+.vote-receipt::before { content: ""; display: inline-grid; place-items: center; width: 1em; height: 1em; border: var(--stroke-thin) solid currentColor; }
+.vote-receipt[data-returned="true"] { color: var(--color-success); }
+.vote-receipt[data-returned="true"]::before { content: "✓" / ""; font-weight: var(--font-weight-strong); }
 .game-shell[data-screen="drink"] .discussion-content::before {
   width: var(--large-screen-sketch-size);
   background-image: var(--whiskey-glass);

@@ -34,10 +34,26 @@ export function tick(state, now, randomInt = max => Math.floor(Math.random() * m
     return { ...state, screen: 'task-event', taskDueAt: undefined, taskStartedAt: now, finishOrder: [],
       task: { key: 'birthday', stage: 'ready' } };
   }
+  if (state.screen === 'S07' && !state.killTask && now >= state.voteDueAt) {
+    const roster = sampleRoster(state).map(({ id, name }) => ({ id, name, returned: false }));
+    return { ...state, screen: 'night-vote', voteDueAt: undefined, voteStartedAt: now,
+      vote: { id: 'sample-vote', selfId: 'self', canVote: !state.dead, endsAt: now + 120_000, roster } };
+  }
+  if (state.screen === 'night-vote') {
+    const vote = state.vote;
+    const roster = vote.roster.map((member, index) => member.id !== 'self' && !member.returned &&
+      now >= state.voteStartedAt + index * 2500 ? { ...member, returned: true } : member);
+    if (now >= vote.endsAt || roster.every(member => member.returned)) {
+      // The sample town gives the visitor a majority when they are still in the game.
+      const [drink, ...pendingDrinks] = state.pendingDrinks ?? [];
+      return { ...state, screen: drink ? 'drink' : 'S07', drink, pendingDrinks, vote: undefined, dead: true, votedOut: vote.canVote };
+    }
+    if (roster.some((member, index) => member !== vote.roster[index])) return { ...state, vote: { ...vote, roster } };
+  }
   if (state.screen === 'task-event') {
     if (state.task.stage === 'waiting-drinks' && now >= state.transitionAt) {
       if (state.sampleChecks?.some(check => check.id === 'task-observed')) return state;
-      return { ...state, screen: 'S07', task: undefined, transitionAt: undefined };
+      return { ...state, screen: 'S07', task: undefined, transitionAt: undefined, voteDueAt: now + 5000 };
     }
     if (['ready', 'waiting'].includes(state.task.stage)) {
       const bots = [...state.otherPlayers].sort((a, b) => Number(a.name === 'Jordan') - Number(b.name === 'Jordan'));
@@ -50,6 +66,13 @@ export function tick(state, now, randomInt = max => Math.floor(Math.random() * m
 
 export function act(current, action, now, randomInt = max => Math.floor(Math.random() * max)) {
   const state = tick(current, now, randomInt);
+  if (state.screen === 'night-vote' && action.type === 'return-vote-slip' && action.voteId === state.vote.id) {
+    const vote = state.vote;
+    const allowed = vote.canVote ? state.otherPlayers.some(member => member.id === action.targetId) : action.targetId === undefined;
+    if (!allowed) return state;
+    const roster = vote.roster.map(member => member.id === vote.selfId ? { ...member, returned: true } : member);
+    return tick({ ...state, vote: { ...vote, roster } }, now, randomInt);
+  }
   if (action.type === 'finish-kill' && state.killTask && action.taskId === state.killTask.id) {
     return { ...state, killTask: undefined };
   }
@@ -154,6 +177,7 @@ function deliverDrinks(state, drinks) {
   const next = withChecks(state, [...(state.sampleChecks ?? []), ...checks]);
   const drink = drinks.find(item => !item.playerName);
   if (!drink) return next;
+  if (state.vote) return { ...next, pendingDrinks: [...(state.pendingDrinks ?? []), drink] };
   if (state.drink) return { ...next, pendingDrinks: [...(state.pendingDrinks ?? []), drink] };
   return { ...next, screen: 'drink', drink };
 }
@@ -179,6 +203,6 @@ function sampleTrigger(state, now, randomInt) {
 }
 
 export function remainingSeconds(state, now) {
-  const endsAt = state.killTask?.endsAt;
+  const endsAt = state.killTask?.endsAt ?? state.vote?.endsAt;
   return endsAt == null ? 0 : Math.max(0, Math.ceil((endsAt - now) / 1000));
 }

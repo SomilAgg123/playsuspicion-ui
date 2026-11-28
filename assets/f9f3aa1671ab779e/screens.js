@@ -107,6 +107,68 @@ function missionCard(info) {
   return card;
 }
 
+function nightVoteScreen(content, vote, dispatch) {
+  content.classList.add('discussion-content', 'vote-content');
+  const heading = element('h2', 'screen-statement', 'Town Vote');
+  const timer = element('span', 'vote-timer');
+  timer.setAttribute('role', 'timer');
+  const clock = element('p', 'vote-clock', 'Closes in ');
+  clock.append(timer);
+  content.append(heading, clock);
+  const submit = targetId => dispatch({ type: 'return-vote-slip', voteId: vote.id, targetId });
+  const status = element('p');
+  status.setAttribute('role', 'status');
+  if (vote.returned) {
+    status.textContent = vote.canVote ? 'Your vote is sealed.' : 'Your slip is returned.';
+  } else if (vote.canVote) {
+    const field = element('label', 'game-field', 'Who do you suspect?');
+    const select = element('select');
+    select.required = true;
+    const prompt = new Option('Choose a player', '');
+    prompt.disabled = true;
+    select.append(prompt);
+    for (const member of vote.roster) {
+      if (member.id !== vote.selfId) select.append(new Option(member.name, member.id));
+    }
+    select.value = '';
+    field.append(select);
+    const seal = button('Seal my vote', () => submit(select.value));
+    seal.disabled = true;
+    select.addEventListener('change', () => { seal.disabled = !select.value; });
+    content.append(field, seal);
+  } else {
+    content.append(element('p', '', 'You’re out. Return a blank slip to check in.'), button('Return my slip', () => submit()));
+  }
+  const ledger = element('section', 'vote-ledger');
+  const title = element('h3', 'section-title', 'Roll call');
+  const count = element('span', 'vote-count');
+  count.setAttribute('aria-live', 'polite');
+  title.append(count);
+  const list = element('ul');
+  for (const member of vote.roster) {
+    const row = element('li');
+    const receipt = element('span', 'vote-receipt');
+    row.append(element('strong', '', member.name), receipt);
+    list.append(row);
+  }
+  ledger.append(title, list);
+  content.append(status, ledger);
+}
+
+function updateRollCall(shell, roster) {
+  const receipts = shell.querySelectorAll('.vote-receipt');
+  roster.forEach(({ returned }, index) => {
+    const receipt = receipts[index];
+    if (receipt.dataset.returned === String(returned)) return;
+    receipt.dataset.returned = String(returned);
+    receipt.textContent = returned ? 'Slip returned' : 'Waiting';
+  });
+  const count = shell.querySelector('.vote-count');
+  const total = roster.filter(member => member.returned).length;
+  const label = total + ' / ' + roster.length;
+  if (count.textContent !== label) count.textContent = label;
+}
+
 function taskScreen(content, state, dispatch) {
   const { key, stage, players, placements } = state.task;
   const title = element('h2', 'section-title task-title', 'New Task');
@@ -208,7 +270,7 @@ function discussionForm(app, content, state, dispatch) {
   content.classList.add('discussion-content');
   content.append(element('h2', 'screen-statement', discussionPages[state.page](state.missions)));
   if (state.page === 'death-report') {
-    if (state.dead) status.textContent = "You've been killed.";
+    if (state.dead) status.textContent = state.votedOut ? 'You were voted out.' : "You've been killed.";
     else content.append(button('Confirm', () => dispatch({ type: 'report-death' }), { variant: 'destructive' }));
   }
   if (state.page === 'mission-report') {
@@ -295,11 +357,21 @@ export function createScreenRenderer(app, dispatch) {
       return;
     }
 
+    // Ledger updates must leave an open candidate picker and its keyboard focus intact.
+    if (state.screen === 'night-vote') {
+      const { roster, selfId } = state.vote;
+      page.vote = { ...state.vote, returned: roster.find(member => member.id === selfId).returned,
+        roster: roster.map(({ id, name }) => ({ id, name })) };
+    }
     const signature = JSON.stringify(page);
     if (returnScreen) app.replaceChildren(returnScreen);
     if (signature !== pageSignature || force) renderScreen(app, page, dispatch);
     pageSignature = signature;
     const shell = app.firstElementChild;
+    if (state.screen === 'night-vote') {
+      updateRollCall(shell, state.vote.roster);
+      shell.querySelector('.vote-timer').textContent = formatTime(seconds);
+    }
     renderKillTask(shell, killTask, dispatch, seconds);
     if (observerChecks) {
       checksButton.textContent = `Observations (${observerChecks.count})`;
@@ -510,11 +582,12 @@ function renderScreen(app, state, dispatch) {
     content.append(next);
   }
 
+  if (state.screen === 'night-vote') nightVoteScreen(content, state.vote, dispatch);
   if (state.screen === 'task-event') taskScreen(content, state, dispatch);
   if (state.screen === 'S07') {
     content.classList.add('discussion-content');
     content.append(element('h2', 'screen-statement', 'Discuss your suspicions'));
-    if (state.dead) content.append(element('p', '', "You've been killed."));
+    if (state.dead) content.append(element('p', '', state.votedOut ? 'You were voted out.' : "You've been killed."));
     for (const [page, labelFor] of Object.entries(discussionPages)) {
       if (!canOpenDiscussionPage(state, page)) continue;
       const action = button(labelFor(state.missions), () => dispatch({ type: page }), { variant: 'secondary' });
@@ -542,7 +615,7 @@ function renderScreen(app, state, dispatch) {
     } else {
       content.append(element('p', '', 'You didn’t log a spy guess.'));
     }
-    if (state.dead) content.append(element('p', '', "You've been killed."));
+    if (state.dead) content.append(element('p', '', state.votedOut ? 'You were voted out.' : "You've been killed."));
   }
 
   if (state.screen === 'mission-check') {
@@ -557,6 +630,7 @@ function renderScreen(app, state, dispatch) {
   }
 
   if (state.screen === 'drink') {
+    if (state.votedOut) content.append(element('p', '', 'You were voted out.'));
     const { id, amount, playerName } = state.drink;
     const title = element('h2', 'screen-statement', playerName ? `Did ${playerName} drink?` : 'Did you drink?');
     title.tabIndex = -1;
@@ -623,9 +697,16 @@ export function createNavigation() {
   let checkId;
   let lastTaskStep;
   let lastDrinkId;
+  let lastVoteId;
   return {
     view(state) {
       const step = state.task && [state.task.key, state.task.stage].join('/');
+      const voteId = state.vote?.id;
+      if (voteId !== lastVoteId) {
+        page = null;
+        checkId = null;
+        lastVoteId = voteId;
+      }
       const drinkId = state.drink?.id;
       if ((drinkId && drinkId !== lastDrinkId) || state.task?.stage === 'result') checkId = null;
       if (step !== lastTaskStep || (drinkId && drinkId !== lastDrinkId)) page = null;

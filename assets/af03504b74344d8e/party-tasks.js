@@ -1,3 +1,5 @@
+export const KILL_WINDOW_MS = 120_000;
+
 export const partyTasks = {
   'red-item': { prompt: 'Grab the nearest red item and hold it up.' },
   'swap-drinks': { prompt: 'Swap drinks with someone (you can give it back after).' },

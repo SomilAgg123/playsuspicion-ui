@@ -1,5 +1,5 @@
-import { applyTheme, createIntro, createScreenRenderer, createNavigation } from './screens.js';
-import { act, tick, createScenario, acceptsPassword } from './scenario.js';
+import { applyTheme, createIntro, formatTime, createScreenRenderer, createNavigation } from './screens.js';
+import { act, tick, createScenario, acceptsPassword, remainingSeconds } from './scenario.js';
 
 applyTheme();
 const app = document.getElementById('app');
@@ -18,7 +18,7 @@ const renderPlayer = createScreenRenderer(app, dispatch);
 
 function render() {
   const { sampleChecks, taskQueue, finishOrder, ...view } = state;
-  renderPlayer(intro.view(navigation.view(view)));
+  renderPlayer(intro.view(navigation.view(view)), remainingSeconds(state, performance.now()));
 }
 
 function dispatch(action) {
@@ -58,4 +58,6 @@ setInterval(() => {
   const now = performance.now();
   const next = tick(state, now);
   if (next !== state) { state = next; render(); }
+  const timer = app.querySelector('[role="timer"]');
+  if (timer) timer.textContent = formatTime(remainingSeconds(state, now));
 }, 100);

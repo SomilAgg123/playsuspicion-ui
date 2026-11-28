@@ -235,6 +235,21 @@ body { background: var(--background-room); color: var(--color-text); font-weight
   background: url('assets/ballot-hat.webp') center / contain no-repeat;
   mix-blend-mode: multiply;
 }
+.game-shell[data-screen="vote-results"] .vote-content::before {
+  aspect-ratio: 2 / 1;
+  background-image: url('assets/vote-revolver.webp');
+}
+.vote-verdict {
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-danger-surface);
+  color: var(--color-on-action);
+  border-block: var(--space-1) double currentColor;
+  font-family: var(--font-display);
+  font-weight: var(--font-weight-display);
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+.vote-verdict strong { display: block; font-size: var(--font-size-statement); line-height: var(--line-height-statement); }
 .vote-content { gap: var(--space-3); }
 .vote-content .screen-statement, .vote-clock { text-align: center; }
 .vote-clock, .vote-count { color: var(--color-label); font-variant-numeric: tabular-nums; }

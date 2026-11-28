@@ -53,9 +53,10 @@ export function tick(state, now, randomInt = max => Math.floor(Math.random() * m
       }
       const standings = roster.filter(member => counts.has(member.id))
         .map(member => ({ name: member.name, votes: counts.get(member.id) })).sort((a, b) => b.votes - a.votes);
-      const votedOut = counts.get('self') > roster.length / 2;
+      const eliminated = roster.find(member => counts.get(member.id) > roster.length / 2);
+      const votedOut = eliminated?.id === 'self';
       return { ...state, screen: 'vote-results', vote: undefined, dead: state.dead || votedOut, votedOut,
-        voteResult: { id: vote.id, standings, votedOut } };
+        voteResult: { id: vote.id, standings, eliminatedName: eliminated?.name ?? null } };
     }
     if (roster.some((member, index) => member !== vote.roster[index])) return { ...state, vote: { ...vote, roster } };
   }

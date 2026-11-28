@@ -158,6 +158,11 @@ function nightVoteScreen(content, vote, dispatch) {
 function voteResultsScreen(content, result, dispatch) {
   content.classList.add('discussion-content', 'vote-content');
   content.append(element('h2', 'screen-statement', 'Town Vote results'));
+  if (result.eliminatedName) {
+    const verdict = element('p', 'vote-verdict');
+    verdict.append(element('strong', '', result.eliminatedName), ' has been voted out.');
+    content.append(verdict);
+  }
   if (result.standings.length) {
     const table = element('table', 'vote-standings');
     const header = table.createTHead().insertRow();
@@ -179,7 +184,6 @@ function voteResultsScreen(content, result, dispatch) {
   } else {
     content.append(element('p', '', 'No votes were cast.'));
   }
-  if (result.votedOut) content.append(element('p', '', 'You were voted out.'));
   content.append(button('Continue', () => dispatch({ type: 'acknowledge-vote-result', voteId: result.id })));
 }
 

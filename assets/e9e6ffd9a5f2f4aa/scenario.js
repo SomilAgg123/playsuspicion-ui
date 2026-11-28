@@ -20,9 +20,15 @@ export function createScenario(team = 'outlaws') {
 
 export function acceptsPassword(value) { return typeof value === 'string' && value.trim().toLowerCase() === 'outlaws'; }
 
-export function tick(state, now) {
+export function tick(state, now, randomInt = max => Math.floor(Math.random() * max)) {
   if (state.screen === 'mission-briefing' && !state.canRevealMissions && now >= state.transitionAt) {
     return { ...state, canRevealMissions: true };
+  }
+  if (state.screen === 'S07' && now >= state.missionConfirmationAt) {
+    const next = withChecks({ ...state, missionConfirmationAt: undefined,
+      information: { ...state.information, missionConfirmed: true } }, [...state.sampleChecks,
+      { kind: 'receipt', id: 'sample-receipt', playerName: state.discussion.missionObserver }]);
+    return sampleTrigger(next, now, randomInt);
   }
   if (state.screen === 'S07' && state.taskDueAt != null && now >= state.taskDueAt) {
     return { ...state, screen: 'task-event', taskDueAt: undefined, taskStartedAt: now, finishOrder: [],
@@ -34,7 +40,7 @@ export function tick(state, now) {
       return { ...state, screen: 'S07', task: undefined, transitionAt: undefined };
     }
     if (['ready', 'waiting'].includes(state.task.stage)) {
-      const bots = [...state.otherPlayers].sort((a, b) => Number(a.name === state.missions.observes) - Number(b.name === state.missions.observes));
+      const bots = [...state.otherPlayers].sort((a, b) => Number(a.name === 'Jordan') - Number(b.name === 'Jordan'));
       const due = bots.filter((bot, index) => now >= state.taskStartedAt + (index + 1) * 400 && !state.finishOrder.includes(bot.id));
       if (due.length) return sampleFinish(state, due.map(bot => bot.id));
     }
@@ -43,7 +49,7 @@ export function tick(state, now) {
 }
 
 export function act(current, action, now, randomInt = max => Math.floor(Math.random() * max)) {
-  const state = tick(current, now);
+  const state = tick(current, now, randomInt);
   if (action.type === 'join' && state.screen === 'S01') {
     const name = typeof action.name === 'string' ? action.name.trim() : '';
     if (!name || name.length > 120 || !Number.isFinite(action.drunkNumber) || action.drunkNumber < 0) return state;
@@ -58,17 +64,21 @@ export function act(current, action, now, randomInt = max => Math.floor(Math.ran
     return { ...state, screen: 'mission-briefing', arrived: true, canRevealMissions: false, transitionAt: now + 600 };
   }
   if (action.type === 'reveal-missions' && state.screen === 'mission-briefing' && state.canRevealMissions) {
-    return { ...state, screen: 'S06', missions: { observer: 'Maya', observes: 'Jordan', spiesOn: 'Bea' } };
+    return { ...state, screen: 'S06', missions: { spiesOn: 'Bea' } };
   }
   if (action.type === 'finish-missions' && state.screen === 'S06') {
-    return { ...state, screen: 'S07', discussion: {
-      observedMission: 'Give Sam a hug', observationConfirmed: false, spyGuess: null,
-    } };
+    const sampleReport = { kind: 'mission', id: 'sample-mission', playerName: 'Jordan', mission: 'Give Sam a hug' };
+    return withChecks({ ...state, screen: 'S07', discussion: { missionObserver: null, spyGuess: null } }, [sampleReport]);
   }
-  if (action.type === 'verify-drink' && state.drinkChecks?.next.id === action.drinkId) {
-    return withChecks(state, state.sampleChecks.slice(1));
+  if (action.type === 'verify-check' && state.observerChecks?.next.id === action.checkId) {
+    const next = withChecks(state, state.sampleChecks.slice(1));
+    return state.observerChecks.next.kind === 'mission' ? sampleTrigger(next, now, randomInt) : next;
   }
   if (state.screen === 'drink' && action.type === 'report-drink' && action.drinkId === state.drink.id) {
+    if (state.pendingDrinks?.length) {
+      const [drink, ...pendingDrinks] = state.pendingDrinks;
+      return { ...state, drink, pendingDrinks };
+    }
     if (state.task) return { ...state, screen: 'task-event', drink: null, transitionAt: now + 500 };
     return { ...state, screen: 'S07', drink: null };
   }
@@ -85,8 +95,8 @@ export function act(current, action, now, randomInt = max => Math.floor(Math.ran
     if (action.type === 'report-death' && state.information.team === 'Townsfolk' && !state.dead) {
       return sampleTrigger({ ...state, dead: true }, now, randomInt);
     }
-    if (action.type === 'confirm-observation' && !details.observationConfirmed) {
-      return sampleTrigger({ ...state, discussion: { ...details, observationConfirmed: true } }, now, randomInt);
+    if (action.type === 'report-mission' && !details.missionObserver) {
+      return { ...state, discussion: { ...details, missionObserver: 'Maya' }, missionConfirmationAt: now + 3000 };
     }
     if (action.type === 'guess-mission' && !state.dead && details.spyGuess === (action.previousGuess ?? null) &&
         Number.isInteger(action.missionIndex) && action.missionIndex >= 0 && action.missionIndex < missions.length) {
@@ -122,26 +132,28 @@ function sampleResults(state, partnerId) {
   for (const { playerId, amount } of taskDrinkAssignments(placements, players)) {
     const recipient = players.find(player => player.id === playerId);
     if (playerId === 'self') taskQueue.unshift({ id: 'task-own', amount });
-    else if (recipient.name === state.missions.observes) taskQueue.push({ id: 'task-observed', playerName: recipient.name, amount });
+    else if (recipient.name === 'Jordan') taskQueue.push({ id: 'task-observed', playerName: recipient.name, amount });
   }
   return { ...state, task: { key: state.task.key, stage: 'result', placements: publicTaskPlacements(placements, players) }, taskQueue };
 }
 
 function withChecks(state, sampleChecks) {
-  const drinkChecks = sampleChecks.length ? { count: sampleChecks.length, next: sampleChecks[0] } : undefined;
-  return { ...state, sampleChecks, drinkChecks };
+  const observerChecks = sampleChecks.length ? { count: sampleChecks.length, next: sampleChecks[0] } : undefined;
+  return { ...state, sampleChecks, observerChecks };
 }
 
 function deliverDrinks(state, drinks) {
-  const checks = drinks.filter(drink => drink.playerName);
+  const checks = drinks.filter(drink => drink.playerName).map(drink => ({ ...drink, kind: 'drink' }));
   const next = withChecks(state, [...(state.sampleChecks ?? []), ...checks]);
   const drink = drinks.find(item => !item.playerName);
-  return drink ? { ...next, screen: 'drink', drink } : next;
+  if (!drink) return next;
+  if (state.drink) return { ...next, pendingDrinks: [...(state.pendingDrinks ?? []), drink] };
+  return { ...next, screen: 'drink', drink };
 }
 
 function sampleTrigger(state, now, randomInt) {
   const players = sampleRoster(state);
-  const observed = state.otherPlayers.find(player => player.name === state.missions.observes);
+  const observed = state.otherPlayers.find(player => player.name === 'Jordan');
   const triggerCount = (state.triggerCount ?? 0) + 1;
   const sampleQueue = drawEventDrinks(players, randomInt).flatMap(({ playerId, amount }) => {
     if (playerId === 'self') return [{ id: `sample-own-${triggerCount}`, amount }];

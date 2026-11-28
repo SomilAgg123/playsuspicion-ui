@@ -6,7 +6,7 @@ import { partyTasks } from './party-tasks.js';
 
 const discussionPages = {
   'death-report': () => "I've been killed",
-  observation: ({ observes }) => `I've observed ${observes} do their secret mission`,
+  'mission-report': () => "I've completed my secret mission",
   spy: ({ spiesOn }) => `I think I know ${spiesOn}’s secret mission`,
 };
 
@@ -211,10 +211,15 @@ function discussionForm(app, content, state, dispatch) {
     if (state.dead) status.textContent = "You've been killed.";
     else content.append(button('Confirm', () => dispatch({ type: 'report-death' }), { variant: 'destructive' }));
   }
-  if (state.page === 'observation') {
-    content.append(element('p', '', details.observedMission));
-    if (details.observationConfirmed) status.textContent = 'Mission confirmed.';
-    else content.append(button('Confirm', () => dispatch({ type: 'confirm-observation' })));
+  if (state.page === 'mission-report') {
+    content.append(element('p', '', state.information.mission));
+    if (state.information.missionConfirmed) {
+      status.textContent = details.missionObserver ? `Confirmed by ${details.missionObserver}.` : 'Mission confirmed.';
+    } else if (details.missionObserver) {
+      status.textContent = `Check with ${details.missionObserver}. They’ve been asked to verify your mission.`;
+    } else {
+      content.append(button('Report completion', () => dispatch({ type: 'report-mission' })));
+    }
   }
   if (state.page === 'spy') {
     if (state.dead) {
@@ -247,16 +252,19 @@ export function createScreenRenderer(app, dispatch) {
   let pageSignature;
   let returnScreen;
   let displayedCheck;
-  const checksButton = button('', () => dispatch({ type: 'drink-checks' }), { variant: 'secondary' });
-  checksButton.dataset.drinkChecks = '';
+  const checksButton = button('', () => dispatch({ type: 'observer-checks' }), { variant: 'secondary' });
+  checksButton.dataset.observerChecks = '';
 
   return (state, force = false) => {
-    const { drinkChecks, openDrinkCheck, ...page } = state;
-    if (openDrinkCheck) {
+    const { observerChecks, openObserverCheck, ...page } = state;
+    if (openObserverCheck) {
       if (!displayedCheck) returnScreen = app.firstElementChild;
-      const checkSignature = JSON.stringify(openDrinkCheck);
+      const checkSignature = JSON.stringify(openObserverCheck);
       if (checkSignature !== displayedCheck || force) {
-        renderScreen(app, { ...page, screen: 'drink', drink: openDrinkCheck, page: 'drink-checks' }, dispatch);
+        const checkPage = openObserverCheck.kind === 'drink'
+          ? { screen: 'drink', drink: openObserverCheck }
+          : { screen: 'mission-check', check: openObserverCheck };
+        renderScreen(app, { ...page, ...checkPage, page: 'observer-checks' }, dispatch);
       }
       displayedCheck = checkSignature;
       return;
@@ -267,14 +275,14 @@ export function createScreenRenderer(app, dispatch) {
     if (signature !== pageSignature || force) renderScreen(app, page, dispatch);
     pageSignature = signature;
     const shell = app.firstElementChild;
-    if (drinkChecks) {
-      checksButton.textContent = `Drink checks (${drinkChecks.count})`;
+    if (observerChecks) {
+      checksButton.textContent = `Observer checks (${observerChecks.count})`;
       if (checksButton.parentNode !== shell) shell.append(checksButton);
     } else {
       checksButton.remove();
     }
     if (displayedCheck && shell.dataset.screen === returnScreen?.dataset.screen && !shell.querySelector('dialog[open]')) {
-      (drinkChecks ? checksButton : shell.querySelector('.brand'))?.focus();
+      (observerChecks ? checksButton : shell.querySelector('.brand'))?.focus();
     }
     returnScreen = null;
     displayedCheck = null;
@@ -448,11 +456,13 @@ function renderScreen(app, state, dispatch) {
 
   if (state.screen === 'mission-briefing') {
     const brief = element('div', 'game-brief mission-briefing');
-    const heading = element('h2', 'screen-statement', 'Let the suspicion commence.');
+    const heading = element('h2', 'screen-statement', 'In the saloon, you have missions:');
     heading.tabIndex = -1;
-    brief.append(heading,
-      element('p', '', 'Tonight, you’ll observe another player. They’ll ask you to confirm when they’ve completed their secret mission. You have an observer of your own.'),
-      element('p', '', 'You’re also spying on someone. Watch what they do. Log your guess during discussion. You can change it until the final roundtable, when a correct guess eliminates your target.'));
+    const roles = element('ul', 'briefing-goals');
+    roles.append(
+      element('li', '', 'Observer - you will be pinged throughout the night to observe secret missions, drinks, and other nefarious activities'),
+      element('li', '', "Spy - you are spying on your target to figure out what their secret mission is. if you guess it, they don't make it to the roundtable."));
+    brief.append(heading, roles);
     const reveal = button('Reveal my missions', () => revealPaper(app, () => dispatch({ type: 'reveal-missions' }), 'S06'));
     reveal.disabled = !state.canRevealMissions;
     reveal.setAttribute('aria-busy', String(!state.canRevealMissions));
@@ -463,8 +473,6 @@ function renderScreen(app, state, dispatch) {
   if (state.screen === 'S06') {
     content.classList.add('missions-content');
     content.append(missionCard(state.information),
-      assignmentCard('Observer', state.missions.observer, "This person confirms when you complete your mission. You can tell them when you're about to do it so they know."),
-      assignmentCard('You observe', state.missions.observes, 'Confirm when this person completes their mission. They are allowed to tell you and communicate with you about it.'),
       assignmentCard('You spy on', state.missions.spiesOn, 'Log your guess during discussion. You can change it until the final roundtable, when a correct guess eliminates this person.'));
   }
 
@@ -484,10 +492,14 @@ function renderScreen(app, state, dispatch) {
     for (const [page, labelFor] of Object.entries(discussionPages)) {
       if (!canOpenDiscussionPage(state, page)) continue;
       const action = button(labelFor(state.missions), () => dispatch({ type: page }), { variant: 'secondary' });
-      if ((page === 'observation' && state.discussion.observationConfirmed) ||
+      if ((page === 'mission-report' && state.information.missionConfirmed) ||
           (page === 'spy' && state.discussion.spyGuess !== null)) {
         action.classList.add('completed-action');
         action.append(element('span', 'action-status', 'Done'));
+      }
+      if (page === 'mission-report' && state.discussion.missionObserver && !state.information.missionConfirmed) {
+        action.classList.add('completed-action');
+        action.append(element('span', 'action-status', 'Awaiting confirmation'));
       }
       action.dataset.navigation = page;
       content.append(action);
@@ -507,6 +519,19 @@ function renderScreen(app, state, dispatch) {
     if (state.dead) content.append(element('p', '', "You've been killed."));
   }
 
+  if (state.screen === 'mission-check') {
+    const { id, kind, playerName, mission } = state.check;
+    const receipt = kind === 'receipt';
+    const title = element('h2', 'screen-statement', receipt
+      ? `${playerName} confirmed your secret mission.`
+      : `Did ${playerName} complete their secret mission?`);
+    title.tabIndex = -1;
+    content.classList.add('discussion-content');
+    content.append(title, element('p', 'game-panel', receipt ? state.information.mission : mission),
+      button(receipt ? `I checked with ${playerName}` : 'Confirm mission', () => dispatch({ type: 'verify-check', checkId: id })),
+      button('Back', () => dispatch({ type: 'back' }), { variant: 'secondary' }));
+  }
+
   if (state.screen === 'drink') {
     const { id, amount, playerName } = state.drink;
     const title = element('h2', 'screen-statement', playerName ? `Did ${playerName} drink?` : 'Did you drink?');
@@ -518,8 +543,8 @@ function renderScreen(app, state, dispatch) {
     const card = element('p', 'game-panel drink-amount', formatDrinkServing(amount));
     content.append(title, card,
       button(playerName ? `I saw ${playerName} drink it` : 'I drank this amount',
-        () => dispatch({ type: playerName ? 'verify-drink' : 'report-drink', drinkId: id })), status);
-    if (state.page === 'drink-checks') {
+        () => dispatch(playerName ? { type: 'verify-check', checkId: id } : { type: 'report-drink', drinkId: id })), status);
+    if (state.page === 'observer-checks') {
       content.append(button('Back', () => dispatch({ type: 'back' }), { variant: 'secondary' }));
     }
   }
@@ -582,7 +607,7 @@ export function createNavigation() {
       if (step !== lastTaskStep || (drinkId && drinkId !== lastDrinkId)) page = null;
       lastDrinkId = drinkId;
       lastTaskStep = step;
-      if (checkId && state.drinkChecks?.next.id === checkId) return { ...state, openDrinkCheck: state.drinkChecks.next };
+      if (checkId && state.observerChecks?.next.id === checkId) return { ...state, openObserverCheck: state.observerChecks.next };
       checkId = null;
       if (page === 'role' && state.canViewRole) return { ...state, screen: 'S02', page };
       if (page === 'missions' && state.missions && state.screen !== 'S06') return { ...state, screen: 'S06', page };
@@ -591,13 +616,13 @@ export function createNavigation() {
       return state;
     },
     navigate(action, state) {
-      if (action === 'drink-checks' && state.drinkChecks) {
-        checkId = state.drinkChecks.next.id;
+      if (action === 'observer-checks' && state.observerChecks) {
+        checkId = state.observerChecks.next.id;
         return '.screen-statement';
       }
       if (action === 'back' && checkId) {
         checkId = null;
-        return '[data-drink-checks]';
+        return '[data-observer-checks]';
       }
       const previous = page;
       if (action === 'back' && page) page = null;

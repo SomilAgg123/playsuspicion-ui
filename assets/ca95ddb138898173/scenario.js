@@ -1,9 +1,13 @@
 import { missions } from './missions.js';
-import { killPrompts, KILL_WINDOW_MS, defaultTaskTriggerBudget, taskTriggerMilestone, needsTaskPartner, taskPlacements, publicTaskPlacements } from './party-tasks.js';
+import { killPrompts, KILL_WINDOW_MS, defaultTaskTriggerBudget, needsTaskPartner, taskPlacements, publicTaskPlacements } from './party-tasks.js';
 import { canBeBarkeep } from './roles.js';
 import { drawEventDrinks, taskDrinkAssignments } from './drinking-plans.js';
 
 const names = ['Priya', 'Sam', 'Chad', 'Maya', 'Jordan', 'Bea', 'Lee'];
+
+const triggerBudget = defaultTaskTriggerBudget(names.length + 1);
+// The solo walkthrough joins a sample room three qualifying events before Showdown.
+const startingTriggers = triggerBudget - 3;
 
 export function createScenario(team = 'outlaws') {
   return {
@@ -14,7 +18,7 @@ export function createScenario(team = 'outlaws') {
       mission: 'Get Chad to say "monster mash"',
     },
     otherPlayers: names.map((name, index) => ({ id: `sample-${index}`, name })),
-    arrived: false,
+    arrived: false, triggerCount: startingTriggers,
   };
 }
 
@@ -25,8 +29,10 @@ export function tick(state, now, randomInt = max => Math.floor(Math.random() * m
   if (state.screen === 'mission-briefing' && !state.canRevealMissions && now >= state.transitionAt) {
     return { ...state, canRevealMissions: true };
   }
-  if (state.screen === 'S07' && !state.killTask && now >= state.showdownAt) {
-    return withChecks({ ...state, roleControls: undefined, screen: 'showdown-announcement' }, (state.sampleChecks ?? []).filter(check => check.kind !== 'mission'));
+  const showdownDue = state.triggerCount >= triggerBudget;
+  if (showdownDue && !state.task && (state.screen === 'S07' || state.screen === 'drink')) {
+    if (state.killTask) return state;
+    return withChecks({ ...state, roleControls: undefined, screen: 'showdown-announcement', pendingDrink: state.drink, drink: undefined }, (state.sampleChecks ?? []).filter(check => check.kind !== 'mission'));
   }
   if (state.screen === 'S07' && now >= state.missionConfirmationAt) {
     const next = { ...state, missionConfirmationAt: undefined, discussion: { ...state.discussion, missionObserver: null },
@@ -62,8 +68,9 @@ export function tick(state, now, randomInt = max => Math.floor(Math.random() * m
         .map(member => ({ name: member.name, votes: counts.get(member.id) })).sort((a, b) => b.votes - a.votes);
       const eliminated = roster.find(member => counts.get(member.id) > roster.length / 2);
       const votedOut = eliminated?.id === 'self';
-      return { ...state, screen: 'vote-results', vote: undefined, dead: state.dead || votedOut, votedOut, roleControls: votedOut ? undefined : state.roleControls,
+      const result = { ...state, screen: 'vote-results', vote: undefined, dead: state.dead || votedOut, votedOut, roleControls: votedOut ? undefined : state.roleControls,
         voteResult: { id: vote.id, standings, eliminatedName: eliminated?.name ?? null } };
+      return eliminated ? sampleTrigger(result, now, randomInt) : result;
     }
     if (roster.some((member, index) => member !== vote.roster[index])) return { ...state, vote: { ...vote, roster } };
   }
@@ -141,7 +148,7 @@ export function act(current, action, now, randomInt = max => Math.floor(Math.ran
     const sampleReport = { kind: 'mission', id: 'sample-mission', playerName: 'Jordan', mission: 'Give Sam a hug' };
     const roleControls = state.information.role === 'The Barkeep'
       ? { type: 'report-toast', sequence: 0, candidates: state.otherPlayers } : undefined;
-    return withChecks({ ...state, roleControls, screen: 'S07', showdownAt: now + 30 * 60_000, discussion: { missionObserver: null, spyGuess: null } }, [sampleReport]);
+    return withChecks({ ...state, roleControls, screen: 'S07', discussion: { missionObserver: null, spyGuess: null } }, [sampleReport]);
   }
   if (action.type === 'send-dispatch' && state.roleControls?.slotId === action.slotId && action.message?.trim()) {
     return { ...state, roleControls: undefined };
@@ -159,6 +166,10 @@ export function act(current, action, now, randomInt = max => Math.floor(Math.ran
   if (check && check.id === action.checkId && action.type === 'verify-check') {
     const next = withChecks(state, state.sampleChecks.slice(1));
     return check.kind === 'mission' ? sampleTrigger(next, now, randomInt) : next;
+  }
+  if (action.type === 'report-drink' && state.pendingDrink && action.drinkId === state.pendingDrink.id) {
+    const [pendingDrink, ...pendingDrinks] = state.pendingDrinks ?? [];
+    return { ...state, pendingDrink, pendingDrinks };
   }
   if (state.screen === 'drink' && action.type === 'report-drink' && action.drinkId === state.drink.id) {
     if (state.pendingDrinks?.length) {
@@ -273,14 +284,14 @@ function sampleTrigger(state, now, randomInt) {
     if (playerId === observed.id) return [{ id: `sample-observed-${triggerCount}`, playerName: observed.name, amount }];
     return [];
   });
-  const taskDueAt = triggerCount === taskTriggerMilestone(1, defaultTaskTriggerBudget(players.length)) ? now + 1500 : state.taskDueAt;
+  const taskDueAt = triggerCount === triggerBudget - 1 ? now + 1500 : state.taskDueAt;
   let killTask = state.killTask;
-  if (triggerCount === 1 && state.information.team === 'Outlaws' && !state.dead) {
+  if (triggerCount === startingTriggers + 1 && state.information.team === 'Outlaws' && !state.dead) {
     const keys = Object.keys(killPrompts);
     killTask = { id: 'sample-kill', promptKey: keys[randomInt(keys.length)], target: 'Chad', endsAt: now + KILL_WINDOW_MS };
   }
   let roleControls = state.dead ? undefined : state.roleControls;
-  if (!state.dead && state.information.role === 'Socrates' && [1, 3].includes(triggerCount)) {
+  if (!state.dead && state.information.role === 'Socrates' && [1, 3].includes(triggerCount - startingTriggers)) {
     roleControls = { type: 'send-dispatch', slotId: 'sample-dispatch-' + triggerCount };
   }
   return deliverDrinks({ ...state, triggerCount, taskDueAt, killTask, roleControls }, sampleQueue);

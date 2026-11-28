@@ -1,12 +1,3 @@
-export const KILL_WINDOW_MS = 120_000;
-
-export const killPrompts = {
-  drink: name => `Tell ${name} to take a drink with you.`,
-  'high-five': name => `Ask ${name} to give you a high five.`,
-  'rock-paper-scissors': name => `Ask ${name} to play a round of rock, paper, scissors with you.`,
-  song: name => `Ask ${name} to recommend a song.`,
-};
-
 export const partyTasks = {
   'red-item': { prompt: 'Grab the nearest red item and hold it up.' },
   'swap-drinks': { prompt: 'Swap drinks with someone (you can give it back after).' },

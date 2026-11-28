@@ -610,9 +610,6 @@ body { background: var(--background-room); color: var(--color-text); font-weight
 }
 .assignment-card summary::-webkit-details-marker { display: none; }
 .assignment-label { color: var(--color-label); overflow-wrap: anywhere; }
-.kill-task { display: grid; grid-template-columns: 1fr auto; gap: var(--space-3); align-items: center; overflow-wrap: anywhere; }
-.kill-timer { padding: var(--space-1) var(--space-3); border: var(--stroke-thin) solid var(--color-border); border-radius: var(--radius-pill); font-variant-numeric: tabular-nums; }
-.kill-task p, .kill-task button { grid-column: 1 / -1; }
 .task-title { text-align: center; color: var(--color-accent); }
 .game-panel.drink-amount { font-size: var(--font-size-drink-amount); padding: var(--space-3) var(--space-2); text-align: center; }
 .assignment-value {

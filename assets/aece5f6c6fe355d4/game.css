@@ -227,7 +227,7 @@ body { background: var(--background-room); color: var(--color-text); font-weight
   align-self: center;
   background: var(--cowboy-portrait) center / contain no-repeat;
 }
-.game-shell[data-screen="night-vote"] .vote-content::before {
+.game-shell:is([data-screen="night-vote"], [data-screen="vote-results"]) .vote-content::before {
   content: "";
   align-self: center;
   width: var(--large-screen-sketch-size);
@@ -238,6 +238,10 @@ body { background: var(--background-room); color: var(--color-text); font-weight
 .vote-content { gap: var(--space-3); }
 .vote-content .screen-statement, .vote-clock { text-align: center; }
 .vote-clock, .vote-count { color: var(--color-label); font-variant-numeric: tabular-nums; }
+.vote-standings { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.vote-standings :is(td, th) { padding: var(--space-2); text-align: start; border-bottom: var(--stroke-thin) solid var(--color-border); }
+.vote-standings thead th { color: var(--color-label); border-bottom: var(--stroke-strong) double var(--color-accent); }
+.vote-standings tr > :last-child { text-align: end; }
 .vote-ledger { margin-top: var(--space-4); }
 .vote-ledger :is(h3, li) { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-3); }
 .vote-ledger h3 { padding-bottom: var(--space-2); border-bottom: var(--stroke-strong) double var(--color-accent); }

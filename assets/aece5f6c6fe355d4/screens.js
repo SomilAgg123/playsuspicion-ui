@@ -12,7 +12,7 @@ const discussionPages = {
 
 function canOpenDiscussionPage(state, page) {
   return state.screen === 'S07' && state.discussion && Object.hasOwn(discussionPages, page)
-    && (page !== 'death-report' || state.information.team === 'Townsfolk');
+    && (page !== 'death-report' || (state.information.team === 'Townsfolk' && !state.dead));
 }
 
 function element(tag, className, text) {
@@ -115,11 +115,11 @@ function nightVoteScreen(content, vote, dispatch) {
   const clock = element('p', 'vote-clock', 'Closes in ');
   clock.append(timer);
   content.append(heading, clock);
-  const submit = targetId => dispatch({ type: 'return-vote-slip', voteId: vote.id, targetId });
+  const submit = targetId => dispatch({ type: 'cast-vote', voteId: vote.id, targetId });
   const status = element('p');
   status.setAttribute('role', 'status');
   if (vote.returned) {
-    status.textContent = vote.canVote ? 'Your vote is sealed.' : 'Your slip is returned.';
+    status.textContent = 'Your vote is sealed.';
   } else if (vote.canVote) {
     const field = element('label', 'game-field', 'Who do you suspect?');
     const select = element('select');
@@ -127,8 +127,8 @@ function nightVoteScreen(content, vote, dispatch) {
     const prompt = new Option('Choose a player', '');
     prompt.disabled = true;
     select.append(prompt);
-    for (const member of vote.roster) {
-      if (member.id !== vote.selfId) select.append(new Option(member.name, member.id));
+    for (const member of vote.candidates) {
+      select.append(new Option(member.name, member.id));
     }
     select.value = '';
     field.append(select);
@@ -137,7 +137,7 @@ function nightVoteScreen(content, vote, dispatch) {
     select.addEventListener('change', () => { seal.disabled = !select.value; });
     content.append(field, seal);
   } else {
-    content.append(element('p', '', 'You’re out. Return a blank slip to check in.'), button('Return my slip', () => submit()));
+    status.textContent = 'You’re spectating this vote.';
   }
   const ledger = element('section', 'vote-ledger');
   const title = element('h3', 'section-title', 'Roll call');
@@ -155,13 +155,41 @@ function nightVoteScreen(content, vote, dispatch) {
   content.append(status, ledger);
 }
 
+function voteResultsScreen(content, result, dispatch) {
+  content.classList.add('discussion-content', 'vote-content');
+  content.append(element('h2', 'screen-statement', 'Town Vote results'));
+  if (result.standings.length) {
+    const table = element('table', 'vote-standings');
+    const header = table.createTHead().insertRow();
+    for (const label of ['Rank', 'Player', 'Votes']) {
+      const th = element('th', '', label);
+      th.scope = 'col';
+      header.append(th);
+    }
+    const body = table.createTBody();
+    let rank = 0;
+    result.standings.forEach(({ name, votes }, index) => {
+      if (votes !== result.standings[index - 1]?.votes) rank = index + 1;
+      const row = body.insertRow();
+      const player = element('th', '', name);
+      player.scope = 'row';
+      row.append(element('td', '', rank), player, element('td', '', votes));
+    });
+    content.append(table);
+  } else {
+    content.append(element('p', '', 'No votes were cast.'));
+  }
+  if (result.votedOut) content.append(element('p', '', 'You were voted out.'));
+  content.append(button('Continue', () => dispatch({ type: 'acknowledge-vote-result', voteId: result.id })));
+}
+
 function updateRollCall(shell, roster) {
   const receipts = shell.querySelectorAll('.vote-receipt');
   roster.forEach(({ returned }, index) => {
     const receipt = receipts[index];
     if (receipt.dataset.returned === String(returned)) return;
     receipt.dataset.returned = String(returned);
-    receipt.textContent = returned ? 'Slip returned' : 'Waiting';
+    receipt.textContent = returned ? 'Voted' : 'Waiting';
   });
   const count = shell.querySelector('.vote-count');
   const total = roster.filter(member => member.returned).length;
@@ -360,7 +388,7 @@ export function createScreenRenderer(app, dispatch) {
     // Ledger updates must leave an open candidate picker and its keyboard focus intact.
     if (state.screen === 'night-vote') {
       const { roster, selfId } = state.vote;
-      page.vote = { ...state.vote, returned: roster.find(member => member.id === selfId).returned,
+      page.vote = { ...state.vote, returned: roster.some(member => member.id === selfId && member.returned),
         roster: roster.map(({ id, name }) => ({ id, name })) };
     }
     const signature = JSON.stringify(page);
@@ -582,6 +610,7 @@ function renderScreen(app, state, dispatch) {
     content.append(next);
   }
 
+  if (state.screen === 'vote-results') voteResultsScreen(content, state.voteResult, dispatch);
   if (state.screen === 'night-vote') nightVoteScreen(content, state.vote, dispatch);
   if (state.screen === 'task-event') taskScreen(content, state, dispatch);
   if (state.screen === 'S07') {
@@ -701,7 +730,7 @@ export function createNavigation() {
   return {
     view(state) {
       const step = state.task && [state.task.key, state.task.stage].join('/');
-      const voteId = state.vote?.id;
+      const voteId = state.vote?.id ?? (state.voteResult && state.voteResult.id + '/results');
       if (voteId !== lastVoteId) {
         page = null;
         checkId = null;

@@ -68,9 +68,10 @@
   --poster-leading: 1;
   --poster-tracking: -0.045em;
   --poster-rule-width: 2.5rem;
-  --cowboy-portrait-size: clamp(5rem, 26vw, 8rem);
+  --screen-sketch-size: clamp(5rem, 26vw, 8rem);
+  --whiskey-glass: url('assets/whiskey-glass.webp');
   --cowboy-portrait: url('assets/suspicious-cowboy.webp');
-  --poster-portrait-size: calc(2 * var(--cowboy-portrait-size));
+  --poster-portrait-size: calc(2 * var(--screen-sketch-size));
   --poster-button-gap: calc(2 * var(--space-10));
   --poster-button-width: 12rem;
   --poster-opening: 750ms;
@@ -218,14 +219,15 @@ body { background: var(--background-room); color: var(--color-text); font-weight
   text-transform: uppercase;
 }
 .poster-title::before,
-.game-shell[data-screen="S07"] .discussion-content::before {
+.game-shell:is([data-screen="S07"], [data-screen="drink"]) .discussion-content::before {
   content: "";
-  width: var(--cowboy-portrait-size);
+  width: var(--screen-sketch-size);
   aspect-ratio: 1;
   flex: none;
   align-self: center;
   background: var(--cowboy-portrait) center / contain no-repeat;
 }
+.game-shell[data-screen="drink"] .discussion-content::before { background-image: var(--whiskey-glass); }
 .poster-title::before {
   width: var(--poster-portrait-size);
   margin-bottom: var(--space-3);

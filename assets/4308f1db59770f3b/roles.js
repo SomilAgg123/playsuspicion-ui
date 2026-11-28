@@ -1,5 +1,5 @@
 export const roles = {
-  Mastermind: {
+  'Gang Boss': {
     team: 'Outlaws',
     character: 'The leader of the Outlaws.',
     task: 'At key moments, give orders to the Outlaws to steer to victory.',
@@ -7,7 +7,7 @@ export const roles = {
   'Hired Gun': {
     team: 'Outlaws',
     character: 'A ruthless operator who is a master at assassination.',
-    task: 'Carry out many of the Outlaws’ kills.',
+    task: 'Carry out half the Outlaws’ kill requests while eligible.',
   },
   Traitor: {
     team: 'Outlaws',
@@ -15,10 +15,10 @@ export const roles = {
     character: 'A disloyal insider with a personal agenda.',
     task: 'Betray [OUTLAW] and get them voted out.',
   },
-  Shitposter: {
+  'Saloon Gossip': {
     team: 'Outlaws',
     character: 'A troublemaker who thrives on distraction.',
-    task: 'Send distracting messages to the Townsfolk throughout the night.',
+    task: 'Send rumors to everyone else in town.',
   },
   Mussolini: {
     team: 'Outlaws',
@@ -39,7 +39,7 @@ export const roles = {
   Trump: {
     team: 'Townsfolk',
     character: 'A loud provocateur who always wants the spotlight.',
-    task: 'Stir confusion and controversy throughout the night.',
+    task: 'Stir controversy. Publicly defend the player under the most suspicion.',
   },
   Karen: {
     team: 'Townsfolk',
@@ -49,14 +49,18 @@ export const roles = {
   },
   Detective: {
     team: 'Townsfolk',
-    targetTeam: 'Any',
     character: 'A hired mind with the power to seek truth.',
-    task: 'Question [PERSON] throughout the night to uncover the truth of who they are.',
+    task: 'Look up another player to learn their team and role.',
   },
   'Lord Varys': {
     team: 'Townsfolk',
     character: 'A skilled diplomat with a penchant for people skills',
     task: 'Go the entire night without receiving more than [LIMIT] votes in any single voting round.',
+  },
+  Sheriff: {
+    team: 'Townsfolk',
+    character: 'The law in a town full of suspects.',
+    task: 'Once tonight, eliminate someone you believe is an Outlaw.',
   },
   'The Lover': {
     team: 'Townsfolk',
@@ -64,7 +68,7 @@ export const roles = {
     character: 'Be inseparably bound to another person',
     task: 'Get [PERSON] to the roundtable with you',
   },
-  'The Enabler': {
+  'The Barkeep': {
     team: 'Townsfolk',
     character: 'You win when others drink.',
     task: 'Get other players to finish their drinks with you. The drinks must be full.',
@@ -72,12 +76,13 @@ export const roles = {
   },
 };
 
-export const outlawRoles = Object.keys(roles).filter(name => roles[name].team === 'Outlaws');
-export const townsfolkRoles = Object.keys(roles).filter(name => roles[name].team === 'Townsfolk');
+const retired = ['Traitor', 'The Lover'];
+export const outlawRoles = Object.keys(roles).filter(name => !retired.includes(name) && roles[name].team === 'Outlaws');
+export const townsfolkRoles = Object.keys(roles).filter(name => !retired.includes(name) && roles[name].team === 'Townsfolk');
 
-export function canBeEnabler(team, drinkingPlan) {
-  const enabler = roles['The Enabler'];
-  return team === enabler.team && enabler.drinkingPlans.includes(drinkingPlan);
+export function canBeBarkeep(team, drinkingPlan) {
+  const barkeep = roles['The Barkeep'];
+  return team === barkeep.team && barkeep.drinkingPlans.includes(drinkingPlan);
 }
 
 export function formatRoleTask(name, { playerCount, targetName } = {}) {

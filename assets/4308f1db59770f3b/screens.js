@@ -424,6 +424,108 @@ function renderKillTask(shell, task, dispatch, seconds) {
   else shell.querySelector('.game-header').after(card);
 }
 
+const roleActionLabels = {
+  'send-dispatch': 'Send a message',
+  investigate: 'Investigate a player',
+  'sheriff-kill': 'Choose a suspect',
+  'report-toast': 'Report a shared toast',
+};
+
+function roleDialog(title) {
+  const dialog = element('dialog', 'game-dialog');
+  dialog.setAttribute('aria-label', title);
+  dialog.append(element('h2', 'section-title', title));
+  const actions = element('div', 'dialog-actions');
+  dialog.append(actions);
+  return { dialog, actions };
+}
+
+function openRoleAction(app, controls, dispatch, role) {
+  const { type, slotId, sequence } = controls;
+  const label = roleActionLabels[type];
+  const { dialog, actions } = roleDialog(label);
+  const cancel = button('Back', () => dialog.close(), { variant: 'secondary' });
+  const status = element('p');
+  status.setAttribute('role', 'status');
+  dialog.insertBefore(status, actions);
+  const submit = async action => {
+    const buttons = [...actions.querySelectorAll('button')];
+    for (const control of buttons) control.disabled = true;
+    const ok = await dispatch(action);
+    for (const control of buttons) control.disabled = false;
+    if (!dialog.open) return;
+    if (!ok) {
+      status.textContent = 'Couldn’t complete that action. Check the selection and try again.';
+      return;
+    }
+    if (type !== 'investigate') return dialog.close();
+    const result = ok.information.roleProgress;
+    dialog.replaceChildren(element('h2', 'section-title', 'Investigation result'), element('p', '', result), actions);
+    actions.replaceChildren(button('Done', () => dialog.close()));
+    actions.firstChild.focus();
+  };
+  if (type === 'send-dispatch') {
+    const audience = role === 'Gang Boss' ? 'Message to the other Outlaws' : 'Message to the town';
+    const { wrapper, input } = field(audience, 'message', 'text', '');
+    input.maxLength = 280;
+    const send = button('Send', () => submit({ type, slotId, message: input.value }));
+    send.disabled = true;
+    input.addEventListener('input', () => { send.disabled = !input.value.trim(); });
+    dialog.insertBefore(wrapper, status);
+    actions.append(send, cancel);
+  } else {
+    const { wrapper, input } = field('Find a player', 'search', 'search', '');
+    const selection = element('label', 'game-field', 'Player');
+    const select = element('select');
+    selection.append(select);
+    const choose = button(type === 'sheriff-kill' ? 'Review choice' : label, () => {
+      const targetId = select.value;
+      if (type !== 'sheriff-kill') return submit({ type, targetId, sequence });
+      const name = select.selectedOptions[0].textContent;
+      const confirm = button('Eliminate player', () => submit({ type, targetId }), { variant: 'destructive' });
+      dialog.replaceChildren(element('h2', 'section-title', `Eliminate ${name}?`),
+        element('p', '', 'This uses your only elimination.'), status, actions);
+      actions.replaceChildren(confirm, cancel);
+      cancel.focus();
+    });
+    const candidates = [...controls.candidates].sort((a, b) => a.name.localeCompare(b.name));
+    function filter() {
+      const matches = candidates.filter(p => p.name.toLowerCase().includes(input.value.trim().toLowerCase()));
+      select.replaceChildren(new Option('Choose a player', ''), ...matches.map(p => new Option(p.name, p.id)));
+      if (matches.length === 1) select.value = matches[0].id;
+      choose.disabled = !select.value;
+    }
+    filter();
+    select.addEventListener('change', () => { choose.disabled = !select.value; });
+    input.addEventListener('input', filter);
+    dialog.insertBefore(wrapper, status);
+    dialog.insertBefore(selection, status);
+    actions.append(choose, cancel);
+  }
+  dialog.dataset.roleAction = type;
+  dialog.addEventListener('close', () => {
+    dialog.remove();
+    app.querySelector('[data-role-opener]')?.focus();
+  });
+  app.after(dialog);
+  dialog.showModal();
+}
+
+function renderMessage(app, message, dispatch) {
+  const previous = document.querySelector('dialog[data-message-id]');
+  if (previous && previous.dataset.messageId === message?.id) return;
+  previous?.remove();
+  if (!message) return;
+  const { dialog, actions } = roleDialog(`Message from ${message.from}`);
+  dialog.dataset.messageId = message.id;
+  dialog.insertBefore(element('p', 'dispatch-text', message.message), actions);
+  const dismiss = () => dispatch({ type: 'dismiss-dispatch', messageId: message.id });
+  actions.append(button('Dismiss', dismiss));
+  dialog.addEventListener('cancel', event => { event.preventDefault(); dismiss(); });
+  app.after(dialog);
+  dialog.showModal();
+}
+
 // Retain the originating controls so a check can return to an unsubmitted selection.
 export function createScreenRenderer(app, dispatch) {
   let pageSignature;
@@ -433,14 +535,17 @@ export function createScreenRenderer(app, dispatch) {
   checksButton.dataset.observerChecks = '';
 
   return (state, seconds, force = false) => {
-    const { observerChecks, openObserverCheck, killTask, ...page } = state;
+    const { observerChecks, openObserverCheck, killTask, dispatchMessage, ...page } = state;
+    const openAction = document.querySelector('dialog[data-role-action]');
+    if (openAction && openAction.dataset.roleAction !== state.roleControls?.type) openAction.close();
+    renderMessage(app, dispatchMessage, dispatch);
     if (openObserverCheck) {
       if (!displayedCheck) returnScreen = app.firstElementChild;
       const checkSignature = JSON.stringify(openObserverCheck);
       if (checkSignature !== displayedCheck || force) {
         const checkPage = openObserverCheck.kind === 'drink'
           ? { screen: 'drink', drink: openObserverCheck }
-          : { screen: 'mission-check', check: openObserverCheck };
+          : { screen: openObserverCheck.kind === 'toast' ? 'toast-check' : 'mission-check', check: openObserverCheck };
         renderScreen(app, { ...page, ...checkPage, page: 'observer-checks' }, dispatch);
       }
       renderKillTask(app.firstElementChild, killTask, dispatch, seconds);
@@ -666,14 +771,6 @@ function renderScreen(app, state, dispatch) {
       assignmentCard('You spy on', state.missions.spiesOn, 'Log your guess during discussion. You can change it until the final roundtable, when a correct guess eliminates this person.'));
   }
 
-  if (state.screen === 'S02' || state.screen === 'S06') {
-    const advance = state.screen === 'S02' ? 'next' : 'finish-missions';
-    const next = button(state.page ? 'Back' : 'Next', () => dispatch({ type: state.page ? 'back' : advance }));
-    next.classList.add('screen-action');
-    if (state.page) next.dataset.navigation = 'return';
-    content.append(next);
-  }
-
   if (state.screen === 'vote-results') voteResultsScreen(content, state.voteResult, dispatch);
   if (state.screen === 'night-vote') ballotScreen(content, state.vote, dispatch);
   if (state.screen === 'task-event') taskScreen(content, state, dispatch);
@@ -697,16 +794,41 @@ function renderScreen(app, state, dispatch) {
       content.append(action);
     }
   }
+  if (['S02', 'S07'].includes(state.screen)) {
+    if (state.information.roleProgress) {
+      const progress = element('p', 'game-panel', state.information.roleProgress);
+      progress.dataset.roleProgress = '';
+      content.append(progress);
+    }
+    if (state.roleControls) {
+      const label = roleActionLabels[state.roleControls.type];
+      const opener = button(label, () => openRoleAction(app, state.roleControls, dispatch, state.information.role), { variant: 'secondary' });
+      opener.dataset.roleOpener = '';
+      content.append(opener);
+    }
+  }
+
+  if (state.screen === 'S02' || state.screen === 'S06') {
+    const advance = state.screen === 'S02' ? 'next' : 'finish-missions';
+    const next = button(state.page ? 'Back' : 'Next', () => dispatch({ type: state.page ? 'back' : advance }));
+    next.classList.add('screen-action');
+    if (state.page) next.dataset.navigation = 'return';
+    content.append(next);
+  }
+
   if (Object.hasOwn(discussionPages, state.screen)) discussionForm(app, content, state, dispatch);
   if (state.screen.startsWith('showdown-')) showdownScreen(content, state, dispatch);
   if (state.pendingDrink && !state.page) content.append(button('View my drink', () => dispatch({ type: 'open-drink' }), { variant: 'secondary' }));
 
-  if (state.screen === 'mission-check') {
+  if (['mission-check', 'toast-check'].includes(state.screen)) {
     const { id, playerName, mission } = state.check;
-    const title = element('h2', 'screen-statement', `Did ${playerName} complete their secret mission?`);
+    const title = element('h2', 'screen-statement', state.screen === 'toast-check'
+      ? `Did you and ${playerName} finish a full drink together?` : `Did ${playerName} complete their secret mission?`);
     title.tabIndex = -1;
     content.classList.add('discussion-content');
-    content.append(title, element('p', 'game-panel', mission),
+    content.append(title);
+    if (mission) content.append(element('p', 'game-panel', mission));
+    content.append(
       button('Yes', () => dispatch({ type: 'verify-check', checkId: id })),
       button('No', () => dispatch({ type: 'reject-check', checkId: id }), { variant: 'secondary' }),
       button('Back', () => dispatch({ type: 'back' }), { variant: 'secondary' }));

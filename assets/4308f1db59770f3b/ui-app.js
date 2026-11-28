@@ -50,7 +50,7 @@ function dispatch(action) {
     state = next;
   }
   render();
-  return true;
+  return state;
 }
 
 render();

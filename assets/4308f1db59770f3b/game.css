@@ -731,6 +731,9 @@ body { background: var(--background-room); color: var(--color-text); font-weight
 .result-panel[data-tone="warning"] { border-color: var(--color-warning); }
 .result-panel[data-tone="danger"] { border-color: var(--color-danger); }
 .game-dialog { width: calc(100% - var(--space-8)); max-width: var(--dialog-width); max-height: calc(100dvh - var(--space-8)); margin: auto; padding: var(--space-6); overflow: auto; background: var(--background-panel); color: var(--color-text); border: var(--stroke-thin) solid var(--color-control-border); border-radius: var(--radius-panel); box-shadow: var(--shadow-dialog); font: inherit; }
+.game-dialog[data-role-action] .dialog-actions { display: grid; }
+.game-dialog .game-field { margin-top: var(--space-4); }
+.dispatch-text { overflow-wrap: anywhere; white-space: pre-wrap; }
 .game-dialog::backdrop { background: var(--color-overlay); }
 .game-dialog .section-title + p { margin-top: var(--space-2); }
 .task-placement { display: grid; gap: var(--space-1); margin-top: var(--space-3); overflow-wrap: anywhere; }

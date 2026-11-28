@@ -214,15 +214,7 @@ function showdownScreen(content, state, dispatch) {
   const advance = step => button('Continue', () => dispatch({ type: 'showdown-continue', step }));
   if (state.screen === 'showdown-announcement') {
     content.append(heading('It’s time for the Saloon Showdown.'), advance('announcement'));
-  } else if (state.screen === 'showdown-eligibility') {
-    const reasons = { killed: 'You were killed.', 'voted-out': 'You were voted out.',
-      mission: 'Your secret mission wasn’t confirmed.', spy: 'Your spy guessed your secret mission.' };
-    content.append(heading(state.reasons.length ? 'You’re out.' : 'You made it to the Showdown.'));
-    for (const reason of state.reasons) content.append(element('p', '', reasons[reason]));
-    if (state.spyResult) {
-      const { target, correct } = state.spyResult;
-      content.append(element('p', '', correct ? `You guessed ${target}’s mission correctly.` : `Your guess for ${target} was incorrect.`));
-    }
+  } else if (state.screen === 'showdown-instructions') {
     const rules = element('ol', 'showdown-rules');
     for (const rule of [
       'Finalists vote on whether everyone in the circle is Townsfolk. Then everyone sees each verdict.',
@@ -230,13 +222,24 @@ function showdownScreen(content, state, dispatch) {
       'The remaining circle votes again. Unanimous Townsfolk or two remaining finalists ends the game.',
       'If any Outlaw remains, the Outlaws win. Otherwise the Townsfolk win.',
     ]) rules.append(element('li', '', rule));
-    content.append(element('h3', 'section-title', 'How it works'), rules, advance('eligibility'));
+    content.append(heading('How it works'), rules, advance('instructions'));
+  } else if (state.screen === 'showdown-eligibility') {
+    const reasons = { killed: 'You were killed.', 'voted-out': 'You were voted out.',
+      mission: 'Your secret mission wasn’t confirmed.', spy: 'Your spy guessed your secret mission.' };
+    content.append(heading(state.reasons.length ? 'You’re out.' : 'You’re in.'));
+    for (const reason of state.reasons) content.append(element('p', '', reasons[reason]));
+    if (state.spyResult) {
+      const { target, correct } = state.spyResult;
+      content.append(element('p', '', correct ? `You guessed ${target}’s mission correctly.` : `Your guess for ${target} was incorrect.`));
+    }
+    content.append(advance('eligibility'));
   } else if (state.screen === 'showdown-team') {
     content.append(heading(state.canChoose ? 'Choose your final team' : 'The circle is gathering.'));
     if (state.canChoose) {
       for (const team of ['Outlaws', 'Townsfolk']) content.append(button(team, () => dispatch({ type: 'choose-final-team', team })));
     }
   } else if (state.screen === 'showdown-end') {
+    content.dataset.winner = state.outcome.winner;
     content.append(heading(`${state.outcome.winner} win!`), element('h3', 'section-title', 'The final circle'));
     if (state.outcome.circle.length) content.append(namedList(state.outcome.circle.map(p => [p.name, p.team])));
     else content.append(element('p', '', 'No one made it to the final circle.'));

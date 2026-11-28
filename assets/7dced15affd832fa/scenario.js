@@ -84,6 +84,9 @@ export function tick(state, now, randomInt = max => Math.floor(Math.random() * m
 export function act(current, action, now, randomInt = max => Math.floor(Math.random() * max)) {
   const state = tick(current, now, randomInt);
   if (action.type === 'showdown-continue' && state.screen === 'showdown-announcement' && action.step === 'announcement') {
+    return { ...state, screen: 'showdown-instructions' };
+  }
+  if (action.type === 'showdown-continue' && state.screen === 'showdown-instructions' && action.step === 'instructions') {
     const reasons = [];
     if (state.dead) reasons.push(state.votedOut ? 'voted-out' : 'killed');
     if (!state.information.missionConfirmed) reasons.push('mission');

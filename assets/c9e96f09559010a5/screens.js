@@ -2,11 +2,11 @@ import { revealPaper } from './role-reveal.js';
 import { drinkingPlans, planDescription, formatDrinkServing } from './drinking-plans.js';
 import { roles, formatRoleTask } from './roles.js';
 import { missions } from './missions.js';
-import { partyTasks } from './party-tasks.js';
+import { killPrompts, partyTasks } from './party-tasks.js';
 
 const discussionPages = {
   'death-report': () => "I've been killed",
-  'mission-report': () => "I've completed my secret mission",
+  'mission-report': () => 'Complete your secret mission',
   spy: ({ spiesOn }) => `I think I know ${spiesOn}’s secret mission`,
 };
 
@@ -245,6 +245,32 @@ export function createIntro() {
   };
 }
 
+function renderKillTask(shell, task, dispatch, seconds) {
+  const previous = shell.querySelector('[data-kill-task]');
+  if (previous && previous.dataset.killTask === task?.id) return;
+  previous?.remove();
+  if (!task) return;
+  const card = element('section', 'game-panel kill-task');
+  card.dataset.killTask = task.id;
+  const title = element('h2', 'section-title', "It's time to kill");
+  title.id = 'kill-task-title';
+  card.setAttribute('aria-labelledby', title.id);
+  const timer = element('span', 'kill-timer', formatTime(seconds));
+  timer.setAttribute('role', 'timer');
+  timer.setAttribute('aria-label', 'Time left for kill task');
+  const done = button("I've killed them.", () => dispatch({ type: 'finish-kill', taskId: task.id }));
+  done.dataset.action = 'finish-kill';
+  done.disabled = seconds === 0;
+  const prompt = killPrompts[task.promptKey];
+  const instruction = prompt
+    ? `${prompt(task.target)} Once they do, privately tell them they've been killed.`
+    : `Privately tell ${task.target} they've been killed.`;
+  card.append(title, timer, element('p', '', `${instruction} They must tap "I've been killed".`), done);
+  const resultDialog = shell.dataset.screen === 'task-event' && shell.querySelector('dialog[open]');
+  if (resultDialog) resultDialog.append(card);
+  else shell.querySelector('.game-header').after(card);
+}
+
 // Retain the originating controls so a check can return to an unsubmitted selection.
 export function createScreenRenderer(app, dispatch) {
   let pageSignature;
@@ -253,8 +279,8 @@ export function createScreenRenderer(app, dispatch) {
   const checksButton = button('', () => dispatch({ type: 'observer-checks' }), { variant: 'secondary' });
   checksButton.dataset.observerChecks = '';
 
-  return (state, force = false) => {
-    const { observerChecks, openObserverCheck, ...page } = state;
+  return (state, seconds, force = false) => {
+    const { observerChecks, openObserverCheck, killTask, ...page } = state;
     if (openObserverCheck) {
       if (!displayedCheck) returnScreen = app.firstElementChild;
       const checkSignature = JSON.stringify(openObserverCheck);
@@ -264,6 +290,7 @@ export function createScreenRenderer(app, dispatch) {
           : { screen: 'mission-check', check: openObserverCheck };
         renderScreen(app, { ...page, ...checkPage, page: 'observer-checks' }, dispatch);
       }
+      renderKillTask(app.firstElementChild, killTask, dispatch, seconds);
       displayedCheck = checkSignature;
       return;
     }
@@ -273,6 +300,7 @@ export function createScreenRenderer(app, dispatch) {
     if (signature !== pageSignature || force) renderScreen(app, page, dispatch);
     pageSignature = signature;
     const shell = app.firstElementChild;
+    renderKillTask(shell, killTask, dispatch, seconds);
     if (observerChecks) {
       checksButton.textContent = `Observations (${observerChecks.count})`;
       if (checksButton.parentNode !== shell) shell.append(checksButton);
@@ -632,6 +660,9 @@ export function createNavigation() {
   };
 }
 
+export function formatTime(seconds) {
+  return [Math.floor(seconds / 60), seconds % 60].map(part => String(part).padStart(2, '0')).join(':');
+}
 
 export function applyTheme() {
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content',

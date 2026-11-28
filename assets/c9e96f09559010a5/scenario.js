@@ -1,5 +1,5 @@
 import { missions } from './missions.js';
-import { defaultTaskTriggerBudget, taskTriggerMilestone, needsTaskPartner, taskPlacements, publicTaskPlacements } from './party-tasks.js';
+import { killPrompts, KILL_WINDOW_MS, defaultTaskTriggerBudget, taskTriggerMilestone, needsTaskPartner, taskPlacements, publicTaskPlacements } from './party-tasks.js';
 import { canBeEnabler } from './roles.js';
 import { drawEventDrinks, taskDrinkAssignments } from './drinking-plans.js';
 
@@ -21,6 +21,7 @@ export function createScenario(team = 'outlaws') {
 export function acceptsPassword(value) { return typeof value === 'string' && value.trim().toLowerCase() === 'outlaws'; }
 
 export function tick(state, now, randomInt = max => Math.floor(Math.random() * max)) {
+  if (state.killTask && now >= state.killTask.endsAt) state = { ...state, killTask: undefined };
   if (state.screen === 'mission-briefing' && !state.canRevealMissions && now >= state.transitionAt) {
     return { ...state, canRevealMissions: true };
   }
@@ -49,6 +50,9 @@ export function tick(state, now, randomInt = max => Math.floor(Math.random() * m
 
 export function act(current, action, now, randomInt = max => Math.floor(Math.random() * max)) {
   const state = tick(current, now, randomInt);
+  if (action.type === 'finish-kill' && state.killTask && action.taskId === state.killTask.id) {
+    return { ...state, killTask: undefined };
+  }
   if (action.type === 'join' && state.screen === 'S01') {
     const name = typeof action.name === 'string' ? action.name.trim() : '';
     if (!name || name.length > 120 || !Number.isFinite(action.drunkNumber) || action.drunkNumber < 0) return state;
@@ -166,5 +170,15 @@ function sampleTrigger(state, now, randomInt) {
   });
   // The seven-person preview demonstrates the first of the twelve milestones.
   const taskDueAt = triggerCount === taskTriggerMilestone(1, defaultTaskTriggerBudget(players.length)) ? now + 1500 : state.taskDueAt;
-  return deliverDrinks({ ...state, triggerCount, taskDueAt }, sampleQueue);
+  let killTask = state.killTask;
+  if (triggerCount === 1 && state.information.team === 'Outlaws' && !state.dead) {
+    const keys = Object.keys(killPrompts);
+    killTask = { id: 'sample-kill', promptKey: keys[randomInt(keys.length)], target: 'Chad', endsAt: now + KILL_WINDOW_MS };
+  }
+  return deliverDrinks({ ...state, triggerCount, taskDueAt, killTask }, sampleQueue);
+}
+
+export function remainingSeconds(state, now) {
+  const endsAt = state.killTask?.endsAt;
+  return endsAt == null ? 0 : Math.max(0, Math.ceil((endsAt - now) / 1000));
 }

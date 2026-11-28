@@ -71,7 +71,7 @@
   --screen-sketch-size: clamp(5rem, 26vw, 8rem);
   --whiskey-glass: url('assets/whiskey-glass.webp');
   --cowboy-portrait: url('assets/suspicious-cowboy.webp');
-  --poster-portrait-size: calc(2 * var(--screen-sketch-size));
+  --large-screen-sketch-size: calc(2 * var(--screen-sketch-size));
   --poster-button-gap: calc(2 * var(--space-10));
   --poster-button-width: 12rem;
   --poster-opening: 750ms;
@@ -227,9 +227,12 @@ body { background: var(--background-room); color: var(--color-text); font-weight
   align-self: center;
   background: var(--cowboy-portrait) center / contain no-repeat;
 }
-.game-shell[data-screen="drink"] .discussion-content::before { background-image: var(--whiskey-glass); }
+.game-shell[data-screen="drink"] .discussion-content::before {
+  width: var(--large-screen-sketch-size);
+  background-image: var(--whiskey-glass);
+}
 .poster-title::before {
-  width: var(--poster-portrait-size);
+  width: var(--large-screen-sketch-size);
   margin-bottom: var(--space-3);
   animation: welcome-fall var(--poster-welcome-fall) var(--ease-standard) var(--poster-cowboy-start) backwards;
 }
@@ -503,17 +506,8 @@ body { background: var(--background-room); color: var(--color-text); font-weight
   pointer-events: none;
 }
 .intro-poster .brand {
-  flex-direction: column;
-  gap: var(--space-2);
   margin-block-end: var(--poster-section-gap);
   font-size: var(--masthead-size);
-}
-.intro-poster .brand::before {
-  content: '';
-  flex: none;
-  width: var(--space-10);
-  aspect-ratio: 1;
-  background: var(--cowboy-portrait) center / contain no-repeat;
 }
 .intro-poster .brand-word {
   width: 100%;
@@ -730,8 +724,6 @@ body { background: var(--background-room); color: var(--color-text); font-weight
 }
 @media (max-height: 42rem) {
   .intro-poster { --poster-section-gap: var(--space-3); }
-  .intro-poster .brand { gap: var(--space-1); }
-  .intro-poster .brand::before { width: var(--space-8); }
   .brief-objective { margin-top: var(--space-4); }
   .game-shell {
     padding-block: max(var(--space-2), env(safe-area-inset-top)) max(var(--space-2), env(safe-area-inset-bottom));
